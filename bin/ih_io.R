@@ -15,6 +15,8 @@ ih_io_sfs <- function(x, uniqseq, cseq, inds)
 {
 		cs <- as.character(uniqseq@uniqdna[match(cseq, labels(uniqseq@uniqdna)),])
 		xm <- as.matrix(x@dna@dna[[1]])
+		nsites <- length(get.dna(x)[[1]][1,])
+
 		bf <- numeric(nsites)
 		ids <- ih_io_getseqIDs(x, inds)
 		nseq <- length(ids)
@@ -22,7 +24,7 @@ ih_io_sfs <- function(x, uniqseq, cseq, inds)
 		print(ids)
 		for (i in seq(1, nsites))
 		{
-			bf[i] <- as.integer((1 - base.freq(xm[ids,i])[[cs[,i]]])*nseq)
+			bf[i] <- as.integer(round((1 - base.freq(xm[ids,i])[[cs[,i]]])*nseq))
 		}
 		print(bf)
 		sfs <- tabulate(bf, nbins= nseq_all - 1)
@@ -30,6 +32,76 @@ ih_io_sfs <- function(x, uniqseq, cseq, inds)
 		
 		return(sfs)
 }
+
+ih_io_jointsfs <- function(x, uniqseq, cseq, inds)
+{
+	cs <- as.character(uniqseq@uniqdna[match(cseq, labels(uniqseq@uniqdna)),])
+	xm <- as.matrix(x@dna@dna[[1]])
+	bf <- matrix(0, length(inds), nsites)
+	nsites <- length(get.dna(x)[[1]][1,])
+	for (j in seq(1,length(inds)))
+	{
+		ids <- ih_io_getseqIDs(x, inds[j])
+		nseq <- length(ids)
+		for (i in seq(1, nsites))
+		{
+			bf[j, i] <- as.integer(round((1 - base.freq(xm[ids,i])[[cs[,i]]])*nseq))
+		}
+	}
+	return(bf)
+}
+
+ih_io_jsfs <- function(x, uniqseq, cseq, sids)
+{
+	cs <- as.character(uniqseq@uniqdna[match(cseq, labels(uniqseq@uniqdna)),])
+	xm <- as.matrix(x@dna@dna[[1]])
+	bf <- matrix(0, length(sids), nsites)
+	nsites <- length(get.dna(x)[[1]][1,])
+	for (j in seq(1,length(sids)))
+	{
+		ids <- row.names(x@dna@meta[which(x@dna@meta[,"sampleID"] == sids[j]),])
+		nseq <- length(ids)
+		for (i in seq(1, nsites))
+		{
+			bf[j, i] <- as.integer(round((1 - base.freq(xm[ids,i])[[cs[,i]]])*nseq))
+		}
+	}
+	
+	ujsfs <- unique(bf, MARGIN=2)
+	ujsfs <- matrix(ujsfs[, -which(colSums(ujsfs)==0)],nrow=length(sids))
+	ujsfs_c <- tabulate(match(data.frame(bf), data.frame(ujsfs)))
+	S = sum(colSums(ujsfs) * ujsfs_c)
+	jsfs <- list(mut=ujsfs, count=ujsfs_c, S=S)
+	return(jsfs)
+}
+
+
+ih_network <- function(bf)
+{
+	nw <- matrix(0, nrow(bf), nrow(bf))
+	for (j in seq(1, ncol(bf)))
+	{
+		ids <- which(bf[, j]>=1)
+		if (length(ids) > 1)
+		{
+			for (m in seq(1, length(ids)-1))
+			{
+				for (n in seq(m+1, length(ids)))
+				{
+					nw[ids[m], ids[n]] <- 1
+				}
+			}
+		}
+	}
+	return(nw)
+}
+
+ih_network2 <- function(bf)
+{
+	# plot 
+}
+
+
 
 ih_io_getseqIDs <- function(x, inds)
 {
