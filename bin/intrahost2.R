@@ -1,3 +1,6 @@
+args <- commandArgs(TRUE) ;
+inds <- args[1]
+
 library("OutbreakTools")
 library("ape")
 library("MCMCpack")
@@ -8,7 +11,19 @@ source("ih_io.R")
 source("ih_model2.R")
 
 
+#inds <- get.individuals(x)
+#inds <- c(25)
+tstart <- 20
+
+####################################################################################
+# Reading in horseflu data, calculcating (joint) sfs, and copy numbers
+
+cn_fname <- "../data/journal.ppat.1003081.s005.csv"
+
+# read in horseflu data
 x <- ih_io_readdata() 
+# read in copy number data
+vcn <- ih_io_readcndata(cn_fname)
 
 # calculate unique sequences
 nsites <- length(get.dna(x)[[1]][1,])
@@ -17,15 +32,12 @@ IDcounts <- do.call(rbind, lapply(uniqseq@uniqID, function(x) length(x)))
 IDcounts <- as.data.frame(IDcounts[order(-IDcounts[, 1]), ])
 colnames(IDcounts) <- c("count")
 
+# get consensus sequence
 # consensus sequence
 cseq <- row.names(IDcounts)[2]
 
-#inds <- get.individuals(x)
 
-
-inds <- c(25)
-#inds <- seq(1,50)
-sfs <- ih_io_sfs(x, uniqseq, cseq, inds)
+#sfs <- ih_io_sfs(x, uniqseq, cseq, inds)
 #print(sfs)
 
 seqs.meta <- subset(x, individual=inds)@dna@meta	
@@ -34,25 +46,26 @@ seqs.dates <- seqs.meta[match(seqs.sids, seqs.meta$sampleID), "date"]
 o <- order(seqs.dates)
 seqs.dates <- seqs.dates[o]
 seqs.sids <- seqs.sids[o]
+
+
+# number of sequences input
 ns <- numeric(length(seqs.sids)) 
 for (i in seq(1, length(seqs.sids)))
 {
 	ns[i] <- length(which(seqs.meta[,"sampleID"]==seqs.sids[i]))
 }
 
+# dates input
+ts <- ih_io_convertdates(seqs.dates, tstart)
+
+# joint site frequency spectrum input
 jsfs <- ih_io_jsfs(x, uniqseq, cseq, seqs.sids)
 
+# copy number 
+cn <- vcn$Copy.No[match(seqs.sids, vcn$Isolate)]
 
-
-print(seqs.dates)
-print(jsfs)
-
+# input parameters
 t <- 3
-S <- sum(sfs)
-
-print(S)
-
-
 bet = 3.4e-5
 p=7.9e-3
 c=3.3
@@ -61,20 +74,20 @@ V0 = 3.5e-1
 T0 = 4e8
 mr=1e-4
 
-print(ns)
 par_init <-c(t,bet,c,p,delt,mr) 
 params <- list(bet= bet, p=p, c=c, delt=delt, V0=V0, T0=T0,  nsites=nsites, Ns = ns, t=t, mr=mr)
 V <- diag(length(par_init))
-mcmc.params <- list(tune=c(0.05, 0.02, 0.02, 0.02, 0.02, 0.01), V=V, verbose=100, burnin=10000, mcmc=50000)
+mcmc.params <- list(tune=c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05), V=V, verbose=10, burnin=0, mcmc=1)
 #data <- list(sfs=sfs[1:(ns[1]-1)], S=S)
-D <- list(mut=jsfs$mut, count=jsfs$count, S=jsfs$S, ts=c(20, 22), Ns=ns)
-#is.list(D)
+D <- list(mut=jsfs$mut, count=jsfs$count, S=jsfs$S, ts=ts, Ns=ns, cn=cn)
 
-#print(D)
-#print(str(D))
-#ih_model_sfsll(params, D)
+#########################################################################################
 
+# run model
 mcmc.out <- ih_model_mcmc(par_init, params, mcmc.params, D)
+ll <- mcmc.out$mcmc.ll
+mcmc.out <- mcmc.out$mcmc.out
 traj <- ih_model_plot2(mcmc.out, params)
-save(mcmc.out, traj, file="mcmc_out12.RData")
+#save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
+save(mcmc.out, traj, ll, file=paste("intrahost", inds, ".RData", sep="")

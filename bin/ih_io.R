@@ -10,6 +10,18 @@ ih_io_readdata <- function()
 	return(x)
 }
 
+ih_io_readcndata <- function(fname)
+{
+	cn <- read.csv(fname)
+	return(cn)
+}
+
+ih_io_convertdates <- function(sdates, tstart)
+{
+	rv <- as.numeric(sdates - sdates[1])
+	return(rv)
+}
+
 
 ih_io_sfs <- function(x, uniqseq, cseq, inds)
 {

@@ -1,4 +1,6 @@
 # fitting of single intrahost model based on site frequency spectrum
+mcmc.ll <- NULL
+
 
 ih_model_init <- function(t, Ns)
 {
@@ -45,9 +47,9 @@ ih_model_sfsll <- function(params, D)
 		ll3 <- 0
 		r <- params$nsites * ih$ES * params$mr
 		ll2 <- dpois(D$S, r, log=TRUE)
-		cn = c(1090, 2310)
+		#cn = c(1090, 2310)
 		#cn = c(1370, 75700)
-		
+		cn = D$cn
 		for (i in seq(1, length(ih$cn)))
 		{
 		ll3 <- ll3 + dnorm(log10(1000 * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
@@ -87,6 +89,7 @@ ih_model_opt <- function(pars, params, D)
 	#ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
 	#}
 	ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
+	#mcmc.ll <<- c(mcmc.ll, ll)
 	return(ll) 
 }
 
@@ -128,7 +131,7 @@ ih_model_mcmc <- function(par_init, params, mcmc.params, D)
 	#V[3, 2] <- 0.5
 	#mcmc.out <- MCMCmetrop1R(ih_model_opt, theta.init = par_init, params=params, data=data, mcmc.params)
 	mcmc.out <- do.call(MCMCmetrop1R, c(list(fun=ih_model_opt, theta.init = par_init, params=params, D=D), mcmc.params))
-	return(mcmc.out)
+	return(list(mcmc.out=mcmc.out, mcmc.ll=mcmc.ll))
 }
 
 ih_model_gridsearch <- function(params, data)

@@ -17,7 +17,7 @@ lines(ti[500:1000], q[1, 500:1000], "l", lty=3, lwd=3)
 dev.off()
 library("OutbreakTools")
 source("ih_io.R")
-source("ih_model.R")
+source("ih_model2.R")
 
 
 x <- ih_io_readdata() 

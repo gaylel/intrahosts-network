@@ -147,6 +147,7 @@ SEXP ih_R_getsfs(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_
 	double t_off = REAL(coerceVector(R_t_off, REALSXP))[0] ;
 	Itrajtype* I ;
 	int h_ind[] = {0, 1} ;
+	int Niter = 5000 ;
 	double *ll , S, *cn, *ptr;
 	
 	SEXP R_list, R_ll, R_names, R_pmean, R_flag, R_cn ;
@@ -166,7 +167,7 @@ SEXP ih_R_getsfs(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_
 	//printf("%8.4f %8.4f %8.4f %8.4f %8.4f %i %8.4f %8.4f\n", h->t_off, h->t_inf, h->tsamp[0], h->tsamp[1], I->T, I->length, cn[0], cn[1]) ;
 	if (ih_check(cn, h) > 0) 
 	{
-		ll = ih_psfs(sdt, I, h, 100) ;
+		ll = ih_psfs(sdt, I, h, Niter) ;
 		//printf("ll = %8.4f\n, ", ll[0]) ;
 		REAL(R_ll)[0] = ll[0] ;
 		REAL(R_pmean)[0] = ll[1] ;
