@@ -63,6 +63,26 @@ ih_io_jointsfs <- function(x, uniqseq, cseq, inds)
 	return(bf)
 }
 
+ih_get_consensus<- function(x, uniqseq, sids)
+{
+	# get ids for first time sample
+	ids <- row.names(x@dna@meta[which(x@dna@meta[,"sampleID"] == sids[1]),])
+	uu1 <- match(ids, unlist(uniqseq@uniqID))
+	uid <- unlist(uniqseq@uniqID)
+	uidc <- do.call(rbind, lapply(uniqseq@uniqID, function(x) length(x)))
+	names(uid) <- rep(names(uniqseq@uniqID),uidc)
+	us1 <- uid[uu1]
+	
+	# frequencies of unique sequences
+	f1 <- rle(sort(names(us1)))
+	uus1 <- uniqseq@uniqdna[unique(names(us1)),]
+	
+	lab11 <- f1$lengths[match(unique(names(us1)), f1$values)]
+	m <- which(lab11==max(lab11))		
+	cseq <-  row.names(uus1)[m]
+	return(cseq)		
+}
+
 ih_io_jsfs <- function(x, uniqseq, cseq, sids)
 {
 	cs <- as.character(uniqseq@uniqdna[match(cseq, labels(uniqseq@uniqdna)),])

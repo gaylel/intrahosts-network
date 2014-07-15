@@ -32,9 +32,6 @@ IDcounts <- do.call(rbind, lapply(uniqseq@uniqID, function(x) length(x)))
 IDcounts <- as.data.frame(IDcounts[order(-IDcounts[, 1]), ])
 colnames(IDcounts) <- c("count")
 
-# get consensus sequence
-# consensus sequence
-cseq <- row.names(IDcounts)[2]
 
 
 #sfs <- ih_io_sfs(x, uniqseq, cseq, inds)
@@ -46,6 +43,11 @@ seqs.dates <- seqs.meta[match(seqs.sids, seqs.meta$sampleID), "date"]
 o <- order(seqs.dates)
 seqs.dates <- seqs.dates[o]
 seqs.sids <- seqs.sids[o]
+
+# get consensus sequence
+cseq <- ih_get_consensus(x, uniqseq, seqs.sids)
+# consensus sequence
+#cseq <- row.names(IDcounts)[1]
 
 
 # number of sequences input
@@ -77,7 +79,7 @@ mr=1e-4
 par_init <-c(t,bet,c,p,delt,mr) 
 params <- list(bet= bet, p=p, c=c, delt=delt, V0=V0, T0=T0,  nsites=nsites, Ns = ns, t=t, mr=mr)
 V <- diag(length(par_init))
-mcmc.params <- list(tune=c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05), V=V, verbose=10, burnin=0, mcmc=1)
+mcmc.params <- list(tune=c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05), V=V, verbose=10, burnin=5000, mcmc=10000)
 #data <- list(sfs=sfs[1:(ns[1]-1)], S=S)
 D <- list(mut=jsfs$mut, count=jsfs$count, S=jsfs$S, ts=ts, Ns=ns, cn=cn)
 
@@ -90,4 +92,4 @@ mcmc.out <- mcmc.out$mcmc.out
 traj <- ih_model_plot2(mcmc.out, params)
 #save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
-save(mcmc.out, traj, ll, file=paste("intrahost", inds, ".RData", sep="")
+save(mcmc.out, traj, ll, file=paste("intrahost", inds, ".RData", sep=""))
