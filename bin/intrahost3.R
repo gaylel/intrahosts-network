@@ -93,6 +93,6 @@ traj <- ih_model_plot2(mcmc.out, params)
 #save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
 
-save(mcmc.out, traj, ll, file=paste("intrahost_", inds, ".RData", 
+save(mcmc.out, traj, ll, file=paste("intrahost.", inds, ".RData", 
 sep=""))
 

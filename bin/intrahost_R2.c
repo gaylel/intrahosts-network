@@ -11,6 +11,7 @@
 
 SEXP ItrajtoR(Itrajtype *I) ;
 sfsdatatype* ih_read_data(SEXP R_D) ;
+SEXP ih_get_traj(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_T0, SEXP R_ss) ;
 
 sfsdatatype* ih_read_data(SEXP R_D)
 {
@@ -113,6 +114,26 @@ SEXP ItrajtoR(Itrajtype *I)
 	UNPROTECT(7) ;
 	return R_list ;
 }
+
+SEXP ih_get_traj(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_T0, SEXP R_ss)
+{
+	double bet = REAL(coerceVector(R_bet, REALSXP))[0] ;
+	double p = REAL(coerceVector(R_p, REALSXP))[0] ;
+	double c = REAL(coerceVector(R_c, REALSXP))[0] ;
+	double delt = REAL(coerceVector(R_delt, REALSXP))[0] ;
+	double V0 = REAL(coerceVector(R_V0, REALSXP))[0] ;		// initial number of infected 
+	double T0 = REAL(coerceVector(R_T0, REALSXP))[0] ;
+	double ss = REAL(coerceVector(R_ss, REALSXP))[0] ;
+	Itrajtype *I ;
+	I = ih_drawI_Baccam(bet, delt, c, p, T0, V0, ss) ;
+	SEXP R_I ;
+	PROTECT(R_I = allocVector(VECSXP, 1)) ;
+	SET_VECTOR_ELT(R_I, 0,  ItrajtoR(I)) ;
+	ih_free(I) ;
+	UNPROTECT(1) ; 
+	return R_I ;
+}
+
 
 SEXP ih_R_getsfs(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_T0, SEXP R_ss, SEXP R_t_off, SEXP R_D)
 {

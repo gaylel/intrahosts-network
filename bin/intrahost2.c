@@ -135,7 +135,7 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 	I->T0 = T0 ;
 	I->V0 = V0 ;
 	I->i = calloc(1, sizeof(double)) ; 
-	I->i[0] = 1;
+	I->i[0] = 0;
 	I->tc = calloc(1, sizeof(double)) ; 
 	I->tc[0] = T0 ;
 	I->v = calloc(1, sizeof(double)) ; 
@@ -150,15 +150,15 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 	I->delt = delt ;
 	I->c = c ;
 	I->p = p ;
-	
-	double Tmax = 50.0 ;
+	I->T = 0 ;
+	double Tmax = 30.0 ;
 	
 	while (I->v[n] >= thr && I->T < Tmax)
 	{
 		d_tc = -(bet * I->tc[n] * I->v[n]) * ss ;
 		d_i = -d_tc - (delt * I->i[n] * ss) ;  
 		d_v = ((p * I->i[n]) - (c * I->v[n])) * ss ;
-		//printf("%8.4f %8.4f %8.4f %8.4f %8.4f\n", I->t[n], I->v[n], d_tc, d_i, d_v) ;
+		//printf("%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\n", I->t[n], I->v[n], I->tc[n], I->i[n], d_i, d_v, I->T) ;
 		
 		I->tc = realloc(I->tc,  (I->length + 1) * sizeof(double)) ;
 		I->v = realloc(I->v,  (I->length + 1) * sizeof(double)) ;
@@ -169,8 +169,13 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 		I->length++ ;
 		n++ ;
 		I->tc[n] = I->tc[n-1] + d_tc ;
+		I->tc[n] = (I->tc[n] < 0) ? 0 : I->tc[n] ; 
 		I->v[n] = I->v[n-1] + d_v ;
+		I->v[n] = (I->v[n] <= 0) ? 0 : I->v[n] ; 
+		
 		I->i[n] = I->i[n-1] + d_i ;  
+		I->i[n] = (I->i[n] <= 0) ? 0 : I->i[n] ; 
+		
 		I->t[n] = I->t[n-1] + ss ;
 		I->inv_ne[n] = (2 * p * bet * I->tc[n]) / I->v[n];
 		I->T+= ss ; 

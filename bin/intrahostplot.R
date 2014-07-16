@@ -3,7 +3,23 @@ fname <- args[1]
 load(fname)
 library("coda")
 library("ape")
+dyn.load("intrahost_R2.so") 
+source("ih_model2.R")
 postscript("traj.eps")
+
+t <- 3
+bet = 2.7e-5
+p=1.2e-2
+c=3.0
+delt=4.0
+V0 = 9.3e-2
+T0 = 4e8
+mr=5.5e-6
+nsites = 903
+ns = NULL
+
+params <- list(bet= bet, p=p, c=c, delt=delt, V0=V0, T0=T0,  nsites=nsites, Ns = ns, t=t, ss= 0.01, mr=mr)
+traj <- ih_model_plot3(mcmc.out, params)
 traj[is.na(traj)] <- 0
 ti <- traj[nrow(traj), ]
 traj <- (traj[-nrow(traj), ])

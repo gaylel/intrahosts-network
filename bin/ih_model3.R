@@ -52,7 +52,7 @@ ih_model_sfsll <- function(params, D)
 		cn = D$cn
 		for (i in seq(1, length(ih$cn)))
 		{
-		ll3 <- ll3 + dnorm(log10(1000 * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
+		ll3 <- ll3 + dnorm(log10(10000 * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
 		}
 		ll <- ll + ll2 + ll3
 	
@@ -88,7 +88,7 @@ ih_model_opt <- function(pars, params, D)
 	# add priors
 	#ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
 	#}
-	ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
+	ll<- ll + dgamma(exp(pars[2:6]), shape=1e-5, scale=1e5,log=TRUE)
 	ll <- ll + dgamma(t, shape=40, scale=0.1, log=TRUE)
 	#mcmc.ll <<- c(mcmc.ll, ll)
 	return(ll) 

@@ -1,6 +1,11 @@
 # fitting of single intrahost model based on site frequency spectrum
 mcmc.ll <- NULL
 
+ih_get_traj_R <- function(bet, p, c, delt, v0, T0, ss)
+{
+	traj <- .Call("ih_get_traj", bet, p, c, delt, v0, T0, ss)
+	return(traj)
+}
 
 ih_model_init <- function(t, Ns)
 {
@@ -52,7 +57,7 @@ ih_model_sfsll <- function(params, D)
 		cn = D$cn
 		for (i in seq(1, length(ih$cn)))
 		{
-		ll3 <- ll3 + dnorm(log10(1000 * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
+		#ll3 <- ll3 + dnorm(log10(10000 * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
 		}
 		ll <- ll + ll2 + ll3
 	
@@ -71,14 +76,16 @@ ih_model_opt <- function(pars, params, D)
 	c <- exp(pars[3])
 	p <- exp(pars[4])
 	delt <- exp(pars[5])
-	mr <-exp(pars[6])
+	V0 <- exp(pars[6])
+	#mr <-exp(pars[6])
 	
 	params$t <- t
 	params$bet <- bet
 	params$c <- c
 	params$delt <- delt
 	params$p <- p
-	params$mr <- mr
+	params$V0 <- V0
+	#params$mr <- mr
 	#ih <- ih_model_fit(params)
 	ll <- log(0)
 	ll <- ih_model_sfsll(params, D)
@@ -89,6 +96,7 @@ ih_model_opt <- function(pars, params, D)
 	#ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
 	#}
 	ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
+	ll <- ll + dgamma(t, shape=40, scale=0.1, log=TRUE)
 	#mcmc.ll <<- c(mcmc.ll, ll)
 	return(ll) 
 }
@@ -194,3 +202,31 @@ ih_model_plot2 <- function(mcmc.in, params)
 	traj <- rbind(traj, ti)
 	return(traj)
 }
+
+
+ih_model_plot3 <- function(mcmc.in, params)
+{
+	Tmax = 20
+	N <- 1000
+	L <- nrow(mcmc.in)
+	ti <- seq(-Tmax, 0, length.out=N+1)
+	traj <- NULL
+	print(mcmc.in)
+	for (i in seq(1, L, by=10))
+	{
+		params$t <- exp(mcmc.in[i, 1])
+		params$bet <- exp(mcmc.in[i, 2])
+		params$c <- exp(mcmc.in[i, 3])
+		params$p <- exp(mcmc.in[i, 4])
+		params$delt <- exp(mcmc.in[i, 5])
+		params$V0 <- exp(mcmc.in[i, 6])
+		sir <- ih_get_traj_R(params$bet, params$p, params$c, params$delt, params$V0, params$T0, params$ss)
+		sir <- sir[[1]]
+		T <- sir$t - (params$t)
+		ap <- approx(T, (sir$v), ti, method="constant")
+		traj <- rbind(traj, ap$y)
+	}
+	traj <- rbind(traj, ti)
+	return(traj)
+}
+
