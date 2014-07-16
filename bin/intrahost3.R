@@ -8,7 +8,7 @@ library("MCMCpack")
 #input/output functions 
 dyn.load("intrahost_R2.so") 
 source("ih_io.R")
-source("ih_model2.R")
+source("ih_model3.R")
 
 
 #inds <- get.individuals(x)
@@ -68,15 +68,15 @@ cn <- vcn$Copy.No[match(seqs.sids, vcn$Isolate)]
 
 # input parameters
 t <- 3
-bet = 2.7e-5
-p=1.2e-2
-c=3.0
-delt=4.0
-V0 = 9.3e-2
+bet = 3.4e-5
+p=7.9e-3
+c=3.3
+delt=3.4
+V0 = 3.5e-1
 T0 = 4e8
 mr=5.5e-6
 
-par_init <-c(t,bet,c,p,delt, V0) 
+par_init <-c(t,bet,c,p,delt,V0) 
 params <- list(bet= bet, p=p, c=c, delt=delt, V0=V0, T0=T0,  nsites=nsites, Ns = ns, t=t, mr=mr)
 V <- diag(length(par_init))
 mcmc.params <- list(tune=c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05), V=V, verbose=10, burnin=5000, mcmc=10000)
@@ -93,6 +93,6 @@ traj <- ih_model_plot2(mcmc.out, params)
 #save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
 
-save(mcmc.out, traj, ll, file=paste("intrahost", inds, ".RData", 
+save(mcmc.out, traj, ll, file=paste("intrahost_", inds, ".RData", 
 sep=""))
 
