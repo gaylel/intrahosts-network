@@ -1,5 +1,7 @@
 args <- commandArgs(TRUE) ;
 inds <- args[1]
+paramfile <- args[2]
+outdir <- args[3]
 
 library("OutbreakTools")
 library("ape")
@@ -66,33 +68,25 @@ jsfs <- ih_io_jsfs(x, uniqseq, cseq, seqs.sids)
 # copy number 
 cn <- vcn$Copy.No[match(seqs.sids, vcn$Isolate)]
 
-# input parameters
-t <- 3
-bet = 3.4e-5
-p=7.9e-3
-c=3.3
-delt=3.4
-V0 = 3.5e-1
-T0 = 4e8
-mr=5.5e-6
+#### optimisation ########
 
-par_init <-c(t,bet,c,p,delt,V0) 
-params <- list(bet= bet, p=p, c=c, delt=delt, V0=V0, T0=T0,  nsites=nsites, Ns = ns, t=t, mr=mr)
-V <- diag(length(par_init))
-mcmc.params <- list(tune=c(0.05, 0.05, 0.05, 0.05, 0.05, 0.05), V=V, verbose=10, burnin=5000, mcmc=10000)
+
+# input parameters
+source(paramfile)
+par_init <- ih_model_getparams(params.isopt, params.init)
+params <- c(params.init, list(nsites=nsites, Ns=ns))
 #data <- list(sfs=sfs[1:(ns[1]-1)], S=S)
 D <- list(mut=jsfs$mut, count=jsfs$count, S=jsfs$S, ts=ts, Ns=ns, cn=cn)
 
 #########################################################################################
 
 # run model
-mcmc.out <- ih_model_mcmc(par_init, params, mcmc.params, D)
+mcmc.out <- ih_model_mcmc(par_init, params, mcmc.params, hp, D)
 ll <- mcmc.out$mcmc.ll
 mcmc.out <- mcmc.out$mcmc.out
-traj <- ih_model_plot2(mcmc.out, params)
+#traj <- ih_model_plot2(mcmc.out, params)
 #save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
-
-save(mcmc.out, traj, ll, file=paste("intrahost.", inds, ".RData", 
-sep=""))
+fout <- paste(outdir, "/intrahost.", inds, ".RData", sep="")
+save(mcmc.out, ll, fout)
 

@@ -36,8 +36,9 @@ ih_model_sfsll <- function(params, D)
 	T0 <- params$T0
 	t <- params$t
 	Ns <- params$Ns
+	#print(c(bet, c, p, delt, V0, T0, t))
 	ss <- 0.01
-	alph = 1000
+	alph <- params$alph
 	ih <-.Call("ih_R_getsfs", bet, p, c, delt, V0, T0, ss, t, D)
 	#print(ih)
 	ll <- log(0)
@@ -47,12 +48,10 @@ ih_model_sfsll <- function(params, D)
 		ll3 <- 0
 		r <- params$nsites * ih$ES * params$mr
 		ll2 <- dpois(D$S, r, log=TRUE)
-		#cn = c(1090, 2310)
-		#cn = c(1370, 75700)
 		cn = D$cn
 		for (i in seq(1, length(ih$cn)))
 		{
-		ll3 <- ll3 + dnorm(log10(10000 * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
+		ll3 <- ll3 + dnorm(log10(alph * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
 		}
 		ll <- ll + ll2 + ll3
 	
@@ -63,33 +62,50 @@ ih_model_sfsll <- function(params, D)
 }
 
 
-
-ih_model_opt <- function(pars, params, D)
+ih_extractparams <- function(pars, params, which.params)
 {
-	t <- exp(pars[1])
-	bet <- exp(pars[2])
-	c <- exp(pars[3])
-	p <- exp(pars[4])
-	delt <- exp(pars[5])
-	V0 <-exp(pars[6])
-	
-	params$t <- t
-	params$bet <- bet
-	params$c <- c
-	params$delt <- delt
-	params$p <- p
-	params$V0 <- V0
+	pars2 <- exp(pars)
+	params[which.params] <- pars2
+	return(params)
+}
+
+ih_model_paramprior <- function(par, hp)
+{
+  args <- hp$args
+  args$x <- par
+  ll <- do.call(paste("d", hp$dens, sep=""), args)       
+  return(ll)
+}
+
+ih_model_parampriors <- function(params, which.params, hp.params)
+{
+	ll <- 0
+	pars2 <- params[which.params]
+	for (i in seq(1, length(pars2)))
+	{
+		ll <- ll + ih_model_paramprior(pars2[[i]], hp.params[[which.params[i]]])
+	}
+	return(ll)
+}
+
+ih_model_opt <- function(pars, params, which.params, hp.params, D)
+{
+	params <- ih_extractparams(pars, params, which.params)
 	#ih <- ih_model_fit(params)
 	ll <- log(0)
 	ll <- ih_model_sfsll(params, D)
+	pars2 <- params[which.params]
+	ll <- ll + ih_model_parampriors(params, which.params, hp.params)
+
+	
 	#if (ih$ET[1] >= 0)
 	#{
 	#ll <- ih_model_ll(ih, data$sfs, data$S, params)
 	# add priors
 	#ll<- ll + dgamma(pars, shape=1e-5, scale=1e5,log=TRUE)
 	#}
-	ll<- ll + dgamma(exp(pars[2:6]), shape=1e-5, scale=1e5,log=TRUE)
-	ll <- ll + dgamma(t, shape=40, scale=0.1, log=TRUE)
+	#ll<- ll + dgamma(exp(pars[2:6]), shape=1e-5, scale=1e5,log=TRUE)
+	#ll <- ll + dgamma(t, shape=40, scale=0.1, log=TRUE)
 	#mcmc.ll <<- c(mcmc.ll, ll)
 	return(ll) 
 }
@@ -124,14 +140,23 @@ ih_model_ll <- function(ih, counts, S, params)
 	return(ll)
 }
 
-ih_model_mcmc <- function(par_init, params, mcmc.params, D)
+ih_model_getparams <- function(whichpar, params)
+{
+	a <- names(which(whichpar==1))
+	return(unlist(params[a]))
+}
+
+ih_model_mcmc <- function(whichpar, params, mcmc.params, hp.params, D)
 {
 	# optimise parameters in logspace.
-	par_init <- log(par_init)
+	
+	par_init <- log(whichpar)
+	which.params <- names(par_init)
+	#print(mcmc.params)
 	#V[2, 3] <- 0.5
 	#V[3, 2] <- 0.5
 	#mcmc.out <- MCMCmetrop1R(ih_model_opt, theta.init = par_init, params=params, data=data, mcmc.params)
-	mcmc.out <- do.call(MCMCmetrop1R, c(list(fun=ih_model_opt, theta.init = par_init, params=params, D=D), mcmc.params))
+	mcmc.out <- do.call(MCMCmetrop1R, c(list(fun=ih_model_opt, theta.init = par_init, params=params, which.params=which.params, hp.params = hp.params, D=D), mcmc.params))
 	return(list(mcmc.out=mcmc.out, mcmc.ll=mcmc.ll))
 }
 

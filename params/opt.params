@@ -1,0 +1,71 @@
+#### initialisation of parameters #######
+
+params.init <- list(
+	t=3,
+	bet=3.4e-5,
+	p=7.9e-3,
+	c=3.3,
+	delt=3.4,
+	V0 = 3.5e-1,
+	T0 = 4e8,
+	mr=5.5e-6,
+	alph=1000
+)
+
+
+#### choose parameters to optimise #######
+# 1 = yes, 0 = no
+
+params.isopt <- list(
+	t=1,
+	bet=0,
+	p=0,
+	c=0,
+	delt=0,
+	V0=1,
+	T0=0,
+	mr=0,
+	alph=0	
+)
+
+mcmc.params <- list(
+	tune=0.1*rep(1,2),
+	V=diag(2),
+	verbose=10, 
+	burnin=5000, 
+	mcmc=10000
+)
+
+#### priors over the parameters ###########
+
+# uninformative prior
+uip <- list(
+	dens="gamma",
+	args=list(
+		shape=1e-5, 
+		scale=1e5,
+		log=TRUE
+	)
+)
+
+
+hp <- list(
+  	t=list(
+  		dens="gamma",
+  		args=list(
+  			shape=40,
+  			scale=0.1,
+  			log=TRUE
+  		)
+  	),
+  	bet=uip,
+	p=uip,
+	c=uip,
+	delt=uip,
+	V0=uip,
+	T0=uip,
+	mr=uip,
+	alpha=uip
+)
+
+
