@@ -18,7 +18,7 @@ ih_io_readcndata <- function(fname)
 
 ih_io_convertdates <- function(sdates, tstart)
 {
-	rv <- as.numeric(sdates - sdates[1])
+	rv <- as.numeric(sdates - sdates[1]) + tstart
 	return(rv)
 }
 

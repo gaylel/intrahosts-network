@@ -3,6 +3,10 @@ inds <- args[1]
 paramfile <- args[2]
 outdir <- args[3]
 
+#inds <- 26
+#paramfile <- "~/Documents/git/intrahosts-network/run/20140721/opt.params"  
+#outdir <- "~/Documents/git/intrahosts-network/run/20140721/"
+
 library("OutbreakTools")
 library("ape")
 library("MCMCpack")
@@ -77,7 +81,7 @@ par_init <- ih_model_getparams(params.isopt, params.init)
 params <- c(params.init, list(nsites=nsites, Ns=ns))
 #data <- list(sfs=sfs[1:(ns[1]-1)], S=S)
 D <- list(mut=jsfs$mut, count=jsfs$count, S=jsfs$S, ts=ts, Ns=ns, cn=cn)
-
+print(D)
 #########################################################################################
 
 # run model
@@ -88,5 +92,5 @@ mcmc.out <- mcmc.out$mcmc.out
 #save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
 fout <- paste(outdir, "/intrahost.", inds, ".RData", sep="")
-save(mcmc.out, ll, fout)
+save(mcmc.out, ll, D, file=fout)
 

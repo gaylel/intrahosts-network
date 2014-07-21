@@ -9,7 +9,8 @@ params.init <- list(
 	V0 = 3.5e-1,
 	T0 = 4e8,
 	mr=5.5e-6,
-	alph=1000
+	alph=1000,
+	ss=0.01
 )
 
 

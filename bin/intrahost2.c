@@ -125,7 +125,7 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 	
 	********************************************************************************/
 	
-	double thr = (double ) 0 ;
+	double thr = (double ) 1 ;
 	double t_i = 0, d_v, d_i, d_tc ;
 	int n=0;
 	
@@ -144,7 +144,7 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 	I->t[0] = 0 ;
 	
 	I->inv_ne = calloc(1, sizeof(double)) ; 
-	I->inv_ne[0] = (2 * p * bet * I->tc[0]) / I->v[0];
+	I->inv_ne[0] = (2 * p * bet * I->tc[0]) / (I->v[0] - 1);
 	//I->N = N ;
 	I->bet = bet ; 
 	I->delt = delt ;
@@ -177,7 +177,7 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 		I->i[n] = (I->i[n] <= 0) ? 0 : I->i[n] ; 
 		
 		I->t[n] = I->t[n-1] + ss ;
-		I->inv_ne[n] = (2 * p * bet * I->tc[n]) / I->v[n];
+		I->inv_ne[n] = (2 * p * bet * I->tc[n]) / (I->v[n] - 1);
 		I->T+= ss ; 
 		 
 	}
@@ -395,11 +395,14 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 	double t_from ;  
 	double t_to ; 
 	double next_bt ; 
-	int i, nlin ; 
+	int i, nlin, k ; 
 	bttype* bt ; 
 	sfstype * x ;
 	int j ;
-	x = sfs_init(2) ;
+	x = sfs_init(h->Nsamp) ;
+	sfsnode *node ; 
+	int d1[x->N] ;
+	double t1 ;
 	
 	bt = ih_btmxinit() ;
 	for (j=0; j< Niter; j++)
@@ -412,6 +415,7 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 			t_to = (i > 0) ? (h->tsamp[i - 1] - h->t_inf) : 0 ;
 			next_bt = t_from ;
 			nlin += h->Nseq[i] ;
+			//printf("%8.4f\t%8.4f\t%8.4f\n", t_from, t_to, h->t_inf) ;
 			bt = ih_btmxupdate(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, -h->Nseq[i]) ;
 			while ((next_bt > t_to))
 			{
@@ -420,6 +424,7 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 				
 				if (next_bt > t_to)
 				{
+					//printf("%i\t%8.4f\n", nlin, next_bt) ;
 					nlin-- ;
 					bt = ih_btmxupdate(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, 1) ;
 					
@@ -435,13 +440,43 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 	
 		for (i=0 ; i<bt->N ; i++)
 		{
-			//printf("%i of %i of %i:  %i %8.4f  %i %i\n", i, bt->N, j, bt->h1[i], bt->h2[i], bt->t[i], bt->k[i]) ;
+			//printf("%i of %i :  %8.4f  %i\n", i, bt->N, bt->t[i], bt->k[i]) ;
 			x = sfs_update(bt->h1[i], bt->h2[i], bt->t[i], bt->k[i], x) ;
 		}
+		// check to see if mrca is after time of infection
+		
+		
+		
+		
+		for (i=0 ; i<x->NNode ; i++)
+		{
+			node = sfsnode_get(i, x->sfs) ;
+			for (k=0 ; k<x->N ; k++)
+			{
+				d1[k] = node->desc[k] ;
+				//	printf("%i ", d1[j]) ;
+			}
+			t1 = node->t ;
+			//printf("%8.4f\n", t1) ;
+			x->sfsp = sfsnode_orderedadd(t1 - h->t_inf, d1, x->N, x->sfsp) ;
+	
+		}
+	
+
+		
+		
+		
+		
 		//sfs_print(x->sfsp, x->N) ;
 		x = sfs_reinit(x) ;	
 		bt = ih_btmxreset(bt) ;
 	}
+
+	
+		
+		
+	
+
 
 	//sfs_calcll(x, sfsdatatype *d, int Niter)
 	ih_btfree(bt) ;

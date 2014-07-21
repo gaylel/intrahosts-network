@@ -1,6 +1,11 @@
 # fitting of single intrahost model based on site frequency spectrum
 mcmc.ll <- NULL
 
+ih_get_traj_R <- function(bet, p, c, delt, v0, T0, ss)
+{
+	traj <- .Call("ih_get_traj", bet, p, c, delt, v0, T0, ss)
+	return(traj)
+}
 
 ih_model_init <- function(t, Ns)
 {
@@ -19,7 +24,7 @@ ih_model_fit <- function(params)
 	T0 <- params$T0
 	t <- params$t
 	Ns <- params$Ns
-	ss <- 0.01
+	ss <- params$ss
 	ts <- c(10, 12)
 	#ih <- .Call("ih_R_drawtraj", bet, p, c, delt, V0, T0, ss, Ns, t, 1)
 	ih <- .Call("ih_R_drawtraj2", bet, p, c, delt, V0, T0, ss, Ns, ts, t, 1)
@@ -37,7 +42,7 @@ ih_model_sfsll <- function(params, D)
 	t <- params$t
 	Ns <- params$Ns
 	#print(c(bet, c, p, delt, V0, T0, t))
-	ss <- 0.01
+	ss <- params$ss
 	alph <- params$alph
 	ih <-.Call("ih_R_getsfs", bet, p, c, delt, V0, T0, ss, t, D)
 	#print(ih)
@@ -46,6 +51,7 @@ ih_model_sfsll <- function(params, D)
 	{
 		ll <- ih$ll
 		ll3 <- 0
+		#print(ih$ES)
 		r <- params$nsites * ih$ES * params$mr
 		ll2 <- dpois(D$S, r, log=TRUE)
 		cn = D$cn
@@ -220,3 +226,28 @@ ih_model_plot2 <- function(mcmc.in, params)
 	traj <- rbind(traj, ti)
 	return(traj)
 }
+
+ih_model_plottraj <- function(mcmc.in, params, which.params)
+{
+	Tmax = 20
+	N <- 1000
+	L <- nrow(mcmc.in)
+	ti <- seq(-Tmax, 0, length.out=N+1)
+	traj <- NULL
+	#print(mcmc.in)
+	
+	for (i in seq(1, L, by=10))
+	{
+		params <- ih_extractparams(mcmc.in[i,], params, which.params)
+	#	print(params)
+		sir <- ih_get_traj_R(params$bet, params$p, params$c, params$delt, params$V0, params$T0, params$ss)
+	#	print(sir)
+		sir <- sir[[1]]
+		T <- sir$t - (params$t)
+		ap <- approx(T, (sir$v), ti, method="constant")
+		traj <- rbind(traj, ap$y)
+	}
+	traj <- rbind(traj, ti)
+	return(traj)
+}
+
