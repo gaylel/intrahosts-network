@@ -15,3 +15,5 @@ runnew.%:
 	cat ../params/opt.params  > ../run/$*/opt.params
 	
 runall.%:
+	cat ../submit.all.jobs |\
+	 sed 's/rundir/$*/g' > ../run/$*/run.jobs
