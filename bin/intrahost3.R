@@ -88,5 +88,5 @@ mcmc.out <- mcmc.out$mcmc.out
 #save(mcmc.out, traj, ll, file="mcmc_out_test.RData")
 
 fout <- paste(outdir, "/intrahost.", inds, ".RData", sep="")
-save(mcmc.out, ll, fout)
+save(mcmc.out, ll, file=fout)
 
