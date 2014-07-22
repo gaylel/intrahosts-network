@@ -16,7 +16,7 @@ source("ih_io.R")
 source("ih_model3.R")
 source(paramfile)
 datafile <- paste(outdir, "/intrahost.", inds, ".RData", sep="")
-if (file.exists(datafile)
+if (file.exists(datafile))
 {
 load(datafile)
 trajfile <- paste(outdir, "/mcmc.", inds, ".pdf", sep="")
