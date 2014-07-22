@@ -1,0 +1,30 @@
+args <- commandArgs(TRUE) ;
+paramfile <- args[1]
+outdir <- args[2]
+
+library("OutbreakTools")
+library("coda")
+
+#input/output functions 
+dyn.load("intrahost_R2.so") 
+source("ih_io.R")
+source("ih_model3.R")
+source(paramfile)
+
+med <- NULL
+for (i in seq(1, 50))
+{
+	datafile <- paste(outdir, "/intrahost.", inds, ".RData", sep="")
+	if (file.exists(datafile))
+	{
+		load(datafile)
+		med <- rbind(med, apply(mcmc.out, 2, median))
+	}
+}
+
+histfile <- paste(outdir, "/mcmc.hist.pdf", sep="")
+
+pdf(histfile)
+for (i in seq(1, ncol(mcmc.out)))
+hist(mcmc.out[,i], main=colnames(mcmc.out)[i], xlab="")
+dev.off()
