@@ -227,12 +227,12 @@ ih_model_plot2 <- function(mcmc.in, params)
 	return(traj)
 }
 
-ih_model_plottraj <- function(mcmc.in, params, which.params)
+ih_model_plottraj <- function(mcmc.in, params, which.params, lim1, lim2)
 {
-	Tmax = 20
+	#Tmax = 20
 	N <- 1000
 	L <- nrow(mcmc.in)
-	ti <- seq(-Tmax, 0, length.out=N+1)
+	ti <- seq(lim1, lim2, length.out=N+1)
 	traj <- NULL
 	#print(mcmc.in)
 	
@@ -245,7 +245,9 @@ ih_model_plottraj <- function(mcmc.in, params, which.params)
 	#	print(sir)
 		sir <- sir[[1]]
 		T <- sir$t - (params$t)
-		ap <- approx(T, (sir$v), ti, method="constant")
+		#print(T)
+		#print(ti)
+		ap <- approx(T, log10(sir$v), ti, method="constant")
 		traj <- rbind(traj, ap$y)
 		print(i)
 	}
