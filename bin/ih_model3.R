@@ -236,16 +236,18 @@ ih_model_plottraj <- function(mcmc.in, params, which.params)
 	traj <- NULL
 	#print(mcmc.in)
 	
-	for (i in seq(1, L, by=10))
+	for (i in seq(1, L, by=100))
+	#for (i in seq(1,))
 	{
 		params <- ih_extractparams(mcmc.in[i,], params, which.params)
-	#	print(params)
+		#print(params)
 		sir <- ih_get_traj_R(params$bet, params$p, params$c, params$delt, params$V0, params$T0, params$ss)
 	#	print(sir)
 		sir <- sir[[1]]
 		T <- sir$t - (params$t)
 		ap <- approx(T, (sir$v), ti, method="constant")
 		traj <- rbind(traj, ap$y)
+		print(i)
 	}
 	traj <- rbind(traj, ti)
 	return(traj)
