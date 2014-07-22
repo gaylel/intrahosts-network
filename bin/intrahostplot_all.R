@@ -10,7 +10,7 @@ dyn.load("intrahost_R2.so")
 source("ih_io.R")
 source("ih_model3.R")
 source(paramfile)
-
+par_init <- ih_model_getparams(params.isopt, params.init)
 med <- NULL
 for (i in seq(1, 50))
 {
@@ -18,6 +18,7 @@ for (i in seq(1, 50))
 	if (file.exists(datafile))
 	{
 		load(datafile)
+		colnames(mcmc.out) <- names(par_init)
 		med <- rbind(med, apply(mcmc.out, 2, median))
 	}
 }
