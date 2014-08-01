@@ -38,5 +38,6 @@ testdata.%:
 testrun.%:	 
 	Rscript intrahosttest.R ../test/$*/opt.params ../test/$*/ ../test/$*/
 
-test.%:
-	echo $*
+testall.%:
+	cat ../submit.test.jobs |\
+	sed 's/rundir/$*/g' > ../test/$*/run.jobs
