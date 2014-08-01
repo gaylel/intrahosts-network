@@ -62,6 +62,21 @@ sfsnode * sfsnode_add(double t, int* desc, int desc_n, sfsnode* cur)
 	return cur ;
 }
 
+sfsnode * sfsnode_add_tofront(double t, int *desc, int desc_n, sfsnode* cur)
+{
+	int i ;
+	sfsnode *ptr ;
+	 
+	ptr = sfsnode_create(t, desc, desc_n) ;
+	
+	if (cur != NULL)
+	{
+		ptr->next = cur ;
+	}
+	
+	return ptr ;
+}
+
 int sfsnode_order(int *desc1, int *desc2, int desc_n)
 {
 	// compare desc1 and desc2 ;
@@ -79,6 +94,20 @@ int sfsnode_order(int *desc1, int *desc2, int desc_n)
 	
 }
 
+int sfs_ifexists(int *desc, int desc_n, int**mut, int mut_n)
+{
+	// check to see if desc is in cur
+	int o = -1, doesexist=0, i=0 ;
+	while  ((o != 0) && (i<mut_n))
+	{
+		o = sfsnode_order(desc, mut[i], desc_n) ;
+		i++ ;
+	}
+	if (o == 0)
+		doesexist = 1 ;
+	return doesexist ;
+	 
+}
 
 sfsnode * sfsnode_orderedadd(double bl, int *desc, int desc_n, sfsnode* cur)
 {
@@ -110,7 +139,8 @@ sfsnode * sfsnode_orderedadd(double bl, int *desc, int desc_n, sfsnode* cur)
 			// desc is current maximum
 			// create new
 		}
-		
+		else
+		{
 		if (o < 0)
 		{
 			ptr2 = sfsnode_create(bl, desc, desc_n) ; 
@@ -124,10 +154,12 @@ sfsnode * sfsnode_orderedadd(double bl, int *desc, int desc_n, sfsnode* cur)
 				head = ptr2 ;
 			}
 		}
-		
+		else{
 		if (o == 0)
 		{
 			cur->t = cur->t + bl ;
+		}
+		}
 		}	
 		cur = head ;
 	}
@@ -189,6 +221,54 @@ sfstype* sfs_init(int Nsamp)
 	return x ;
 }
 
+sfstype* sfs_ebtinit(sfstype* x, int* Nseq)
+{
+	int i, seqtot=0;
+	
+	for (i=0 ; i<x->N ; i++)
+	{
+		seqtot += Nseq[i] ;
+	}
+	
+	x->ebt = calloc(seqtot-1, sizeof(double)) ;
+	
+	for (i=0 ; i<(seqtot-1) ; i++)
+	{
+		x->ebt[i] = 0 ;
+	}
+	x->ebtp = seqtot - 2 ;
+	x->ebtl = seqtot - 1 ;
+	return x ;
+	
+}
+
+sfstype* sfs_ebtadd(sfstype* x, double bt)
+{
+	x->ebt[x->ebtp] += bt ;
+	x->ebtp-- ;
+	return x ; 
+}
+
+
+sfstype* sfs_ebtmean(sfstype* x, int Niter)
+{
+	int i ;
+	for (i=0; i<x->ebtl ; i++)
+	{
+		x->ebt[i] = x->ebt[i] / Niter ;
+	}
+	return x ;
+}
+
+void sfs_ebtprint(sfstype *x)
+{
+	int i ;
+	for (i=(x->ebtl - 1); i>=0 ; i--)
+	{
+		printf("%i\t%8.4f\n", i, x->ebt[i]) ;
+	}
+	
+}
 sfstype* sfs_reinit(sfstype* x)
 {
 	// clear sfs but keep sfsp
@@ -202,6 +282,7 @@ void sfs_free(sfstype* x)
 {
 	if (x->sfs != NULL) sfsnodes_free(x->sfs) ;
 	if (x->sfsp != NULL) sfsnodes_free(x->sfsp) ;
+	free(x->ebt) ;
 	free(x) ;
 } 
 
@@ -219,7 +300,9 @@ sfstype* sfs_addpop(int Nnode, int ind, double t, sfstype* x)
 	
 	for (i=0 ; i<Nnode ; i++)
 	{
-		x->sfs = sfsnode_add(t, desc, desc_n, x->sfs) ;
+		//x->sfs = sfsnode_add(t, desc, desc_n, x->sfs) ;
+		x->sfs = sfsnode_add_tofront(t, desc, desc_n, x->sfs) ;
+
 		x->NNode++ ;
 	}
 	free(desc) ;
@@ -271,9 +354,80 @@ sfstype* sfs_coalesce(sfstype* x, double t_c)
 	{
 		d1[i] += d2[i] ;
 	}
-	x->sfs = sfsnode_add(t_c, d1, x->N, x->sfs) ;
+	x->sfs = sfsnode_add_tofront(t_c, d1, x->N, x->sfs) ;
 	
 	return x ;
+}
+
+sfstype* sfs_coalesce2(sfstype* x, double t_c, int** mut, int mut_n)
+{
+	// coalesce two of the nodes in x
+	// generate random number
+	int r, d1[x->N], d2[x->N], i ;
+	double t1, t2 ;
+	sfsnode* node ;
+	
+	// first node
+	r = (int) ((double)(x->NNode) * rand() / ( RAND_MAX + 1.0));
+	//printf("%i\t", r) ;
+	node = sfsnode_get(r, x->sfs) ;
+	t1 = node->t ;
+	for (i=0 ; i<x->N ; i++)
+	{
+		d1[i] = node->desc[i] ;
+	//	printf("%i ", d1[i]) ;
+	}
+	//printf("\n") ;
+	x->ttot += t1 - t_c ;	
+	if (sfs_ifexists(d1, x->N, mut, mut_n) == 1)
+		x->sfsp = sfsnode_orderedadd(t1 - t_c, d1, x->N, x->sfsp) ;
+	// delete node
+	x->sfs = sfsnode_delete(r, x->sfs) ;
+	x->NNode-- ;
+	
+	r = (int) ((double)(x->NNode) * rand() / ( RAND_MAX + 1.0));
+	//printf("%i\n", r) ;
+	node = sfsnode_get(r, x->sfs) ;
+	t2 = node->t ;
+	for (i=0 ; i<x->N ; i++)
+	{
+		d2[i] = node->desc[i] ;
+	//	printf("%i ", d2[i]) ;
+	}
+	//printf("\n") ;
+	x->ttot += t2 - t_c ;	
+	if (sfs_ifexists(d2, x->N, mut, mut_n) == 1)
+		x->sfsp = sfsnode_orderedadd(t2 - t_c, d2, x->N, x->sfsp) ;
+	
+	
+	// delete node
+	x->sfs = sfsnode_delete(r, x->sfs) ;
+	//x->NNode-- ;
+	
+	// add coalesced node
+	for (i=0 ; i<x->N ; i++)
+	{
+		d1[i] += d2[i] ;
+	}
+	x->sfs = sfsnode_add_tofront(t_c, d1, x->N, x->sfs) ;
+	
+	return x ;
+}
+
+sfstype* sfs_update2(int h1, int h2, double t, int k, sfstype* x, int **mut, int mut_n)
+{
+	//printf("k=%i", k) ;
+	if (k<0)
+	{
+		// adding nodes
+		x = sfs_addpop(-k, h2, t, x) ;
+	}
+	else
+	{
+		// coalescent event
+		//printf("coalesce %i %8.4f %i %i\n", k, t, h1, h2) ;
+		x = sfs_coalesce2(x, t, mut, mut_n) ;
+	}
 }
 
 sfstype* sfs_update(int h1, int h2, double t, int k, sfstype* x)
