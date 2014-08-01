@@ -67,6 +67,12 @@ ih_get_consensus<- function(x, uniqseq, sids)
 {
 	# get ids for first time sample
 	ids <- row.names(x@dna@meta[which(x@dna@meta[,"sampleID"] == sids[1]),])
+	cseq <- ih_consensus(uniqseq, ids)
+	return(cseq)		
+}
+
+ih_consensus <- function(uniqseq, ids)
+{
 	uu1 <- match(ids, unlist(uniqseq@uniqID))
 	uid <- unlist(uniqseq@uniqID)
 	uidc <- do.call(rbind, lapply(uniqseq@uniqID, function(x) length(x)))
@@ -78,17 +84,18 @@ ih_get_consensus<- function(x, uniqseq, sids)
 	uus1 <- uniqseq@uniqdna[unique(names(us1)),]
 	
 	lab11 <- f1$lengths[match(unique(names(us1)), f1$values)]
-	m <- which(lab11==max(lab11))		
+	m <- which(lab11==max(lab11))[1]		
 	cseq <-  row.names(uus1)[m]
 	return(cseq)		
 }
+
 
 ih_io_jsfs <- function(x, uniqseq, cseq, sids)
 {
 	cs <- as.character(uniqseq@uniqdna[match(cseq, labels(uniqseq@uniqdna)),])
 	xm <- as.matrix(x@dna@dna[[1]])
-	bf <- matrix(0, length(sids), nsites)
 	nsites <- length(get.dna(x)[[1]][1,])
+	bf <- matrix(0, length(sids), nsites)
 	for (j in seq(1,length(sids)))
 	{
 		ids <- row.names(x@dna@meta[which(x@dna@meta[,"sampleID"] == sids[j]),])
@@ -106,6 +113,35 @@ ih_io_jsfs <- function(x, uniqseq, cseq, sids)
 	jsfs <- list(mut=ujsfs, count=ujsfs_c, S=S)
 	return(jsfs)
 }
+
+ih_io_jsfs2 <- function(x, uniqseq, cseq)
+{
+	print(cseq)
+	cs <- as.character(uniqseq@uniqdna[match(cseq, labels(uniqseq@uniqdna)),])
+	xm <- as.matrix(x)
+	nsites <- length(x[1,])
+	bf <- matrix(0, 1, nsites)
+	for (j in seq(1,1))
+	{
+		ids <- row.names(x)
+		nseq <- length(ids)
+		for (i in seq(1, nsites))
+		{
+			bf[j, i] <- as.integer(round((1 - base.freq(xm[,i])[[cs[,i]]])*nseq))
+		}
+	}
+	
+	ujsfs <- unique(bf, MARGIN=2)
+	ujsfs <- matrix(ujsfs[, -which(colSums(ujsfs)==0)],nrow=1)
+	ujsfs_c <- tabulate(match(data.frame(bf), data.frame(ujsfs)))
+	#S = sum(colSums(ujsfs) * ujsfs_c)
+	S = sum(ujsfs_c)
+	jsfs <- list(mut=ujsfs, count=ujsfs_c, S=S)
+	return(jsfs)
+}
+
+
+
 
 
 ih_network <- function(bf)

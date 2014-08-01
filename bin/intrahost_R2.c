@@ -27,9 +27,19 @@ sfsdatatype* ih_read_data(SEXP R_D)
 	int** mut , *mut_c, lp, S, mut_n, *ns, i, j, *ptr;
 	double *ts, *ptr2 ;
 	sfsdatatype * x ;
-	lp = INTEGER(coerceVector(R_dim, INTSXP))[0] ;
-	mut_n = INTEGER(coerceVector(R_dim, INTSXP))[1] ;
-	ptr = INTEGER(coerceVector(R_mut, INTSXP)) ;
+	if (isNull(R_dim))
+	{
+		lp = 0 ;
+		mut_n = 0 ;	
+	}
+	else
+	{
+		lp = INTEGER(coerceVector(R_dim, INTSXP))[0] ;
+		mut_n = INTEGER(coerceVector(R_dim, INTSXP))[1] ;
+		ptr = INTEGER(coerceVector(R_mut, INTSXP)) ;
+	}
+	
+	
 	mut = calloc(mut_n, sizeof(int*)) ;
 	for (i=0 ; i<mut_n ; i++)
 	{
@@ -49,17 +59,18 @@ sfsdatatype* ih_read_data(SEXP R_D)
 	
 	ptr = INTEGER(coerceVector(R_ns, INTSXP)) ;
 	ns = calloc(lp, sizeof(int)) ;
-	for (i=0 ; i<lp ; i++)
+	for (i=0 ; i<LENGTH(R_ns) ; i++)
 	{
 		ns[i] = ptr[i] ;
 	}
 	
 	ptr2 = REAL(coerceVector(R_ts, REALSXP)) ;
 	ts = calloc(lp, sizeof(double)) ;
-	for (i=0 ; i<lp ; i++)
+	for (i=0 ; i<LENGTH(R_ts) ; i++)
 	{
 		ts[i] = ptr2[i] ;
 	}
+	
 	
 	S = INTEGER(coerceVector(R_S, INTSXP))[0] ;
 	
@@ -134,6 +145,45 @@ SEXP ih_get_traj(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_
 	return R_I ;
 }
 
+SEXP ih_R_getebt(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_T0, SEXP R_ss, SEXP R_t_off, SEXP R_D, SEXP R_Niter)
+{
+	double bet = REAL(coerceVector(R_bet, REALSXP))[0] ;
+	double p = REAL(coerceVector(R_p, REALSXP))[0] ;
+	double c = REAL(coerceVector(R_c, REALSXP))[0] ;
+	double delt = REAL(coerceVector(R_delt, REALSXP))[0] ;
+	double V0 = REAL(coerceVector(R_V0, REALSXP))[0] ;		// initial number of infected 
+	double T0 = REAL(coerceVector(R_T0, REALSXP))[0] ;
+	double ss = REAL(coerceVector(R_ss, REALSXP))[0] ;
+	double t_off = REAL(coerceVector(R_t_off, REALSXP))[0] ;
+	int Niter = INTEGER(coerceVector(R_Niter, INTSXP))[0] ;
+	
+	int h_ind[] = {0, 1} ;
+	//int Niter = 5000 ;
+	int i , Nseq=0;
+	Itrajtype *I ;
+	I = ih_drawI_Baccam(bet, delt, c, p, T0, V0, ss) ;
+	sfsdatatype *sdt = ih_read_data(R_D) ;
+	int Nsamp = LENGTH(VECTOR_ELT(R_D, 4)) ;
+	printf("Nsamp = %i, ns = %i, ts=%8.4f\n", Nsamp, sdt->ns[0], sdt->ts[0]) ;
+	hosttype* h ;
+	h = ih_hostinit(h_ind, sdt->ns, sdt->ts, Nsamp, t_off) ;
+
+	double *ebt ;
+	ebt = ih_get_ebt(sdt, I, h, Niter) ;
+	for (i=0 ; i<h->Nsamp ; i++)
+		Nseq+= h->Nseq[i] ;
+	
+	SEXP R_ebt ;	
+	PROTECT(R_ebt = allocVector(REALSXP, Nseq-1)) ;
+	for (i=0 ; i< (Nseq - 1) ; i++)
+	{
+		REAL(R_ebt)[i] = ebt[i] ;
+	}
+	ih_free(I) ;
+	free(ebt) ;
+	UNPROTECT(1) ;
+	return R_ebt ;
+}
 
 SEXP ih_R_getsfs(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_T0, SEXP R_ss, SEXP R_t_off, SEXP R_D)
 {
@@ -179,7 +229,7 @@ SEXP ih_R_getsfs(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_
 	PROTECT(R_cn = allocVector(REALSXP, Nsamp)) ;
 	INTEGER(R_flag)[0] = 0 ;
 	
-	I = ih_drawI_Baccam(bet, delt, c, p, T0, V0, ss ) ;
+	I = ih_drawI_Baccam2(bet, delt, c, p, T0, V0, ss ) ;
 	hosttype* h ;
 	h = ih_hostinit(h_ind, sdt->ns, sdt->ts, Nsamp, t_off) ;
 	
@@ -224,7 +274,94 @@ SEXP ih_R_getsfs(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_
 	return R_list ;
 }
 
+SEXP ih_R_getsfs2(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_T0, SEXP R_ss, SEXP R_t_off, SEXP R_D)
+{
+	/*******************************************************************************
+	
+	Draws deterministic SIR trajectory using Euler's forward method, and calculates 
+	expected branching times, and site frequency spectrum 
+	
+	Args:	R_bet: growth rate
+			R_gam: removal rate
+			R-I0: initial number of infected
+			R_NS:	Population size
+			R_ss: stepsize
+			R_Nseq: number of sequences sampled
+			R_ts: time at which sequences are sampled, relative to infection at t=0
+			
+	Returns:
+			pointer to Itrajtype 
+	
+	********************************************************************************/
+	
+	int i ;
+	double bet = REAL(coerceVector(R_bet, REALSXP))[0] ;
+	double p = REAL(coerceVector(R_p, REALSXP))[0] ;
+	double c = REAL(coerceVector(R_c, REALSXP))[0] ;
+	double delt = REAL(coerceVector(R_delt, REALSXP))[0] ;
+	double V0 = REAL(coerceVector(R_V0, REALSXP))[0] ;		// initial number of infected 
+	double T0 = REAL(coerceVector(R_T0, REALSXP))[0] ;
+	double ss = REAL(coerceVector(R_ss, REALSXP))[0] ;
+	sfsdatatype *sdt = ih_read_data(R_D) ;
+	int Nsamp = sdt->lp ;
+	double t_off = REAL(coerceVector(R_t_off, REALSXP))[0] ;
+	Itrajtype* I ;
+	int h_ind[] = {0, 1} ;
+	int Niter = 5000 ;
+	double *ll , S, *cn, *ptr;
+	
+	SEXP R_list, R_ll, R_names, R_pmean, R_flag, R_cn ;
+	PROTECT(R_list = allocVector(VECSXP, 5) ) ;
+	PROTECT(R_pmean = allocVector(REALSXP, 1)) ;
+	PROTECT(R_flag = allocVector(INTSXP, 1)) ;
+	PROTECT(R_ll = allocVector(REALSXP, 1)) ;
+	PROTECT(R_cn = allocVector(REALSXP, Nsamp)) ;
+	INTEGER(R_flag)[0] = 0 ;
+	
+	I = ih_drawI_Baccam2(bet, delt, c, p, T0, V0, ss ) ;
+	hosttype* h ;
+	h = ih_hostinit(h_ind, sdt->ns, sdt->ts, Nsamp, t_off) ;
+	
+	// check params first
+	cn = ih_get_cn(h, I) ;
+	//printf("%8.4f %8.4f %8.4f %8.4f %8.4f %i %8.4f %8.4f\n", h->t_off, h->t_inf, h->tsamp[0], h->tsamp[1], I->T, I->length, cn[0], cn[1]) ;
+	if (ih_check(cn, h) > 0) 
+	{
+		ll = ih_psfs2(sdt, I, h, Niter) ;
+		//printf("ll = %8.4f\n, ", ll[0]) ;
+		REAL(R_ll)[0] = ll[0] ;
+		REAL(R_pmean)[0] = ll[1] ;
+		ptr = REAL(R_cn) ;
+		for (i=0 ; i<Nsamp ; i++)
+		{
+			ptr[i] = cn[i] ;
+		}
+		free(cn) ;
+		free(ll) ;
+		ih_hostfree(h) ;
+		sfsdata_free(sdt) ;
+		INTEGER(R_flag)[0] = 1 ;
+	}
+	SET_VECTOR_ELT(R_list, 0, R_ll) ;
+	SET_VECTOR_ELT(R_list, 1,  ItrajtoR(I)) ;
+	SET_VECTOR_ELT(R_list, 2,  R_pmean) ;
+	SET_VECTOR_ELT(R_list, 3,  R_cn) ;
+	SET_VECTOR_ELT(R_list, 4,  R_flag) ;
+	PROTECT(R_names=allocVector(STRSXP,5)) ;
+	SET_STRING_ELT(R_names, 0, mkChar("ll")) ;
+	SET_STRING_ELT(R_names, 1, mkChar("sir")) ;
+	SET_STRING_ELT(R_names, 2, mkChar("ES")) ;
+	SET_STRING_ELT(R_names, 3, mkChar("cn")) ;
+	SET_STRING_ELT(R_names, 4, mkChar("err")) ;
+	setAttrib(R_list, R_NamesSymbol, R_names);
+	
+	UNPROTECT(6) ;
 
+	
+	
+	ih_free(I) ;
+	return R_list ;
+}
 
 
 

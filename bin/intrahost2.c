@@ -186,6 +186,84 @@ Itrajtype * ih_drawI_Baccam(double bet, double delt, double c, double p, double 
 		
 }
 
+Itrajtype * ih_drawI_Baccam2(double bet, double delt, double c, double p, double T0, double V0, double ss )
+{
+	/*******************************************************************************
+	
+	Draws deterministic trajectory using Euler's forward method
+	
+	Args:	
+	Returns:
+			pointer to Itrajtype
+	
+	********************************************************************************/
+	
+	double thr = (double ) 1 ;
+	double t_i = 0, d_v, d_i, d_tc ;
+	double Tmax = 30.0 ;
+	int maxl = (int) ceil(Tmax / ss) ;
+	int n=0;
+	
+	Itrajtype* I ;
+	I = calloc(1, sizeof(Itrajtype));
+	I->length = 1 ;
+	I->T0 = T0 ;
+	I->V0 = V0 ;
+	
+	
+	I->i = calloc(maxl, sizeof(double)) ; 
+	I->i[0] = 0;
+	I->tc = calloc(maxl, sizeof(double)) ; 
+	I->tc[0] = T0 ;
+	I->v = calloc(maxl, sizeof(double)) ; 
+	I->v[0] = V0;
+	I->t = calloc(maxl, sizeof(double)) ;
+	I->t[0] = 0 ;
+	
+	I->inv_ne = calloc(maxl, sizeof(double)) ; 
+	I->inv_ne[0] = (2 * p * bet * I->tc[0]) / (I->v[0] - 1);
+	//I->N = N ;
+	I->bet = bet ; 
+	I->delt = delt ;
+	I->c = c ;
+	I->p = p ;
+	I->T = 0 ;
+	
+	
+	while (I->v[n] >= thr && I->T < Tmax)
+	{
+		d_tc = -(bet * I->tc[n] * I->v[n]) * ss ;
+		d_i = -d_tc - (delt * I->i[n] * ss) ;  
+		d_v = ((p * I->i[n]) - (c * I->v[n])) * ss ;
+		//printf("%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\n", I->t[n], I->v[n], I->tc[n], I->i[n], d_i, d_v, I->T) ;
+		
+		//I->tc = realloc(I->tc,  (I->length + 1) * sizeof(double)) ;
+		//I->v = realloc(I->v,  (I->length + 1) * sizeof(double)) ;
+		//I->i = realloc(I->i,  (I->length + 1) * sizeof(double)) ;
+		//I->t = realloc(I->t,  (I->length + 1) * sizeof(double)) ;
+		
+		//I->inv_ne = realloc(I->inv_ne,  (I->length + 1) * sizeof(double)) ;
+		I->length++ ;
+		n++ ;
+		I->tc[n] = I->tc[n-1] + d_tc ;
+		I->tc[n] = (I->tc[n] < 0) ? 0 : I->tc[n] ; 
+		I->v[n] = I->v[n-1] + d_v ;
+		I->v[n] = (I->v[n] <= 0) ? 0 : I->v[n] ; 
+		
+		I->i[n] = I->i[n-1] + d_i ;  
+		I->i[n] = (I->i[n] <= 0) ? 0 : I->i[n] ; 
+		
+		I->t[n] = I->t[n-1] + ss ;
+		I->inv_ne[n] = (2 * p * bet * I->tc[n]) / (I->v[n] - 1);
+		I->T+= ss ; 
+		 
+	}
+	
+	return I ;
+		
+}
+
+
 ivectype* ih_Ilookup(int l, Itrajtype* I)
 {
 /*******************************************************************************
@@ -320,6 +398,32 @@ bttype * ih_btmxinit()
 	return bt ;
 }
 
+bttype * ih_btmxinit2(int* Nseq, int Nsamp)
+{
+	bttype *bt ;
+	bt = calloc(1, sizeof(bttype)) ;
+	/*int *nlin ;	// number of lineages
+	int *h1 ; // host index
+	int *h2 ;
+	double *t ;	// branching time 
+	int *k ; // key 1=coalescent, -n=adding n lineages
+	*/
+	
+	int i, nlin=0 ;
+	for (i = 0 ; i< Nsamp ; i++)
+	{
+		nlin += Nseq[i] ;
+	}
+	bt->nlin = calloc(nlin, sizeof(int)) ;
+	bt->h1 = calloc(nlin, sizeof(int)) ;
+	bt->h2 = calloc(nlin, sizeof(int)) ;
+	bt->k = calloc(nlin, sizeof(int)) ;
+	bt->t = calloc(nlin, sizeof(double)) ;
+	bt->N = 0;
+	return bt ;
+}
+
+
 bttype * ih_btmxreset(bttype *x)
 {
 	free(x->nlin) ;
@@ -347,6 +451,7 @@ void ih_btfree(bttype *x)
 	if (x->k != NULL) free(x->k) ;
 	free(x) ;
 }
+
 
 
 bttype * ih_btmxupdate(bttype* bt, int nlin, int h1, int h2, double t, int k)
@@ -378,37 +483,132 @@ bttype * ih_btmxupdate(bttype* bt, int nlin, int h1, int h2, double t, int k)
 	return bt ;
 }
 
+bttype * ih_btmxupdate2(bttype* bt, int nlin, int h1, int h2, double t, int k)
+{
+	bt->nlin[bt->N] = nlin ;
+	bt->h1[bt->N] = h1 ;
+	bt->h2[bt->N] = h2 ;
+	bt->k[bt->N] = k ;
+	bt->t[bt->N] = t;
+	//printf("%i %i %i %8.4f %i\n", nlin, h1, h2, t, k) ; 
+	bt->N++ ;
+	return bt ;
+}
+
+double* ih_get_ebt(sfsdatatype* sdt, Itrajtype *I, hosttype *h, int Niter)
+{
+	// get expected branching times of coalescent
+	sfstype *x ;
+	x = ih_draw_allbt(Niter, h, I) ;
+	x = sfs_ebtmean(x, Niter) ;
+	//x = ih_draw_coaltree2(I, h, Niter, sdt) ;
+	// copy branching times
+	double *ebt ;
+	ebt = calloc(x->ebtl, sizeof(double)) ;
+	int i ;
+	for (i=0 ; i<x->ebtl ; i++)
+	{
+		ebt[i] = x->ebt[i] ; 
+	}
+	sfs_free(x) ;
+	return ebt ;
+}
+
+
 double* ih_psfs(sfsdatatype* sdt, Itrajtype *I, hosttype *h, int Niter)
 {
 	sfstype * x ;
 	double *ll ;
-	x = ih_draw_coaltree(I, h, Niter) ;
-	ll = sfs_calcll(x, sdt, Niter) ;	
+	//x = ih_draw_coaltree(I, h, Niter) ;
+	//ll = sfs_calcll(x, sdt, Niter) ;	
+	//sfs_print(x->sfsp, x->N) ;
+	
+	x = ih_draw_coaltree2(I, h, Niter, sdt) ;
+	ll = sfs_calcll2(x, sdt, Niter) ;	
+	//sfs_print(x->sfsp, x->N) ;
+	
+	
 	sfs_free(x) ;
 
 	return ll ;
 }
 
+double* ih_psfs2(sfsdatatype* d, Itrajtype *I, hosttype *h, int Niter)
+{
+	
+	double *ll ;
+	double ttot=0 ;
+	int i, j ;
+	
+	sfstype *x ;
+	x = ih_draw_allbt(Niter, h, I) ;
+	
+	//for (i=0 ; i<x->ebtl ; i++)
+	//{
+	//	ttot += x->ebt[i] ; 
+	//}
+	//ttot = ttot / Niter ; 
+	x = sfs_ebtmean(x, Niter) ;
+	//sfs_ebtprint(x) ;
+	
+	double sumkET = ih_calculateess1(x->ebt, (x->ebtl + 1)) ;
+	
+	
+	double p ;
+	ll = calloc(2, sizeof(double)) ;
+	ll[0] = 0.0 ;
+	ll[1] = sumkET  ;
+	for (i=0 ; i<d->mut_n ; i++)
+	{
+		p = ih_calculateess2(x->ebt, x->ebtl + 1, d->mut[i][0], sumkET) ;
+		//printf("b=%i, p=%8.4f, ", d->mut[i][0], p) ;
+		ll[0]+= d->mutc[i]*(log(p)) ;
+	}
+	//printf("\n") ;
+	//printf("ttot = %8.4f\n", ttot) ;
+	
+	// add multinomial term
+	ll[0]+= lgammafn(d->mut_n + 1) ;
+	for (i=0 ; i<d->mut_n ; i++)
+	{
+		ll[0]-=  lgammafn(d->mutc[i] + 1) ;
+	}
+	
+	sfs_free(x) ;
+	return ll ;
+}
 
-sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
+
+
+sfstype* ih_draw_coaltree2(Itrajtype *I, hosttype* h, int Niter, sfsdatatype *sdt)
 {
 	double t_from ;  
 	double t_to ; 
-	double next_bt ; 
+	double next_bt, old_bt ; 
 	int i, nlin, k ; 
 	bttype* bt ; 
 	sfstype * x ;
 	int j ;
 	x = sfs_init(h->Nsamp) ;
 	sfsnode *node ; 
-	int d1[x->N] ;
+	int d1[x->N], btn ;
 	double t1 ;
 	
 	bt = ih_btmxinit() ;
+	x = sfs_ebtinit(x, h->Nseq) ;
+	btn = x->ebtl + h->Nsamp ; 
+	bt->nlin = calloc(btn, sizeof(int)) ;
+	bt->h1 = calloc(btn, sizeof(int)) ;
+	bt->h2 = calloc(btn, sizeof(int)) ;
+	bt->k = calloc(btn, sizeof(int)) ;
+	bt->t = calloc(btn, sizeof(double)) ;
+			
 	for (j=0; j< Niter; j++)
 	{
 		nlin = 0 ;
-	
+		old_bt = h->tsamp[h->Nsamp-1] - h->t_inf;
+		x->ebtp = x->ebtl - 1 ;
+		
 		for (i=h->Nsamp-1 ; i>=0 ; i--)
 		{
 			t_from = h->tsamp[i] - h->t_inf ;
@@ -416,7 +616,7 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 			next_bt = t_from ;
 			nlin += h->Nseq[i] ;
 			//printf("%8.4f\t%8.4f\t%8.4f\n", t_from, t_to, h->t_inf) ;
-			bt = ih_btmxupdate(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, -h->Nseq[i]) ;
+			bt = ih_btmxupdate2(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, -h->Nseq[i]) ;
 			while ((next_bt > t_to))
 			{
 				next_bt = ih_draw_nextbt(I, nlin, next_bt, t_to) ;
@@ -424,9 +624,187 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 				
 				if (next_bt > t_to)
 				{
+					x = sfs_ebtadd(x, old_bt - next_bt) ;
+					old_bt = next_bt ;
+
 					//printf("%i\t%8.4f\n", nlin, next_bt) ;
 					nlin-- ;
-					bt = ih_btmxupdate(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, 1) ;
+					bt = ih_btmxupdate2(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, 1) ;
+					
+				}
+			
+			}
+			//
+			
+	       if (nlin == 2 && i==0) break ;
+		}
+	
+	
+	
+		for (i=0 ; i<bt->N ; i++)
+		{
+			//printf("%i of %i :  %8.4f  %i\n", i, bt->N, bt->t[i], bt->k[i]) ;
+			x = sfs_update2(bt->h1[i], bt->h2[i], bt->t[i], bt->k[i], x, sdt->mut, sdt->mut_n) ;
+		}
+		// check to see if mrca is after time of infection
+		
+		
+		// update x->sfsp
+		node = x->sfs ; 
+		for (i=0 ; i<x->NNode ; i++)
+		{
+			//node = sfsnode_get(i, x->sfs) ;
+			
+			for (k=0 ; k<x->N ; k++)
+			{
+				d1[k] = node->desc[k] ;
+				//	printf("%i ", d1[j]) ;
+			}
+			t1 = node->t ;
+			//printf("%8.4f\n", t1) ;
+			
+			x->ttot += t1 - h->t_inf ;	
+			if (sfs_ifexists(d1, x->N, sdt->mut, sdt->mut_n) == 1)
+				x->sfsp = sfsnode_orderedadd(t1 - h->t_inf, d1, x->N, x->sfsp) ;
+			node = node->next ; 
+		}
+	
+
+		
+		
+		
+		
+		//sfs_print(x->sfsp, x->N) ;
+		x = sfs_reinit(x) ;	
+		
+		bt->N = 0 ;
+		//bt = ih_btmxreset(bt) ;
+	}
+
+	
+		
+		
+	
+
+
+	//sfs_calcll(x, sfsdatatype *d, int Niter)
+	ih_btfree(bt) ;
+	bt = NULL ;
+	x = sfs_ebtmean(x, Niter) ;
+	//sfs_ebtprint(x) ;
+	return x ;
+}
+
+
+sfstype* ih_draw_allbt(int Niter, hosttype* h, Itrajtype* I)
+{
+	double t_from ;  
+	double t_to ; 
+	double next_bt, old_bt ; 
+	int i, nlin, k ; 
+	sfstype * x ;
+	int j ;
+	x = sfs_init(h->Nsamp) ;
+	sfsnode *node ; 
+	int d1[x->N], btn ;
+	double t1 ;
+	
+	x = sfs_ebtinit(x, h->Nseq) ;
+			
+	for (j=0; j< Niter; j++)
+	{
+		nlin = 0 ;
+		old_bt = h->tsamp[h->Nsamp-1] - h->t_inf;
+		x->ebtp = x->ebtl - 1 ;
+		
+		for (i=h->Nsamp-1 ; i>=0 ; i--)
+		{
+			t_from = h->tsamp[i] - h->t_inf ;
+			t_to = (i > 0) ? (h->tsamp[i - 1] - h->t_inf) : 0 ;
+			next_bt = t_from ;
+			nlin += h->Nseq[i] ;
+			while ((next_bt > t_to))
+			{
+				next_bt = ih_draw_nextbt(I, nlin, next_bt, t_to) ;
+				//if (next_bt==-1) i=0 ;
+				
+				if (next_bt > t_to)
+				{
+					x = sfs_ebtadd(x, old_bt - next_bt) ;
+					old_bt = next_bt ;
+
+					//printf("%i\t%8.4f\n", nlin, next_bt) ;
+					nlin-- ;
+				}
+			
+			}
+			//
+			
+	       if (nlin == 2 && i==0) break ;
+		}
+	}
+
+	
+		
+		
+	
+
+
+	//x = sfs_ebtmean(x, Niter) ;
+	//sfs_ebtprint(x) ;
+	return x ;
+}
+
+sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
+{
+	double t_from ;  
+	double t_to ; 
+	double next_bt, old_bt ; 
+	int i, nlin, k ; 
+	bttype* bt ; 
+	sfstype * x ;
+	int j ;
+	x = sfs_init(h->Nsamp) ;
+	sfsnode *node ; 
+	int d1[x->N], btn ;
+	double t1 ;
+	
+	bt = ih_btmxinit() ;
+	x = sfs_ebtinit(x, h->Nseq) ;
+	btn = x->ebtl + h->Nsamp ; 
+	bt->nlin = calloc(btn, sizeof(int)) ;
+	bt->h1 = calloc(btn, sizeof(int)) ;
+	bt->h2 = calloc(btn, sizeof(int)) ;
+	bt->k = calloc(btn, sizeof(int)) ;
+	bt->t = calloc(btn, sizeof(double)) ;
+			
+	for (j=0; j< Niter; j++)
+	{
+		nlin = 0 ;
+		old_bt = h->tsamp[h->Nsamp-1] - h->t_inf;
+		x->ebtp = x->ebtl - 1 ;
+		
+		for (i=h->Nsamp-1 ; i>=0 ; i--)
+		{
+			t_from = h->tsamp[i] - h->t_inf ;
+			t_to = (i > 0) ? (h->tsamp[i - 1] - h->t_inf) : 0 ;
+			next_bt = t_from ;
+			nlin += h->Nseq[i] ;
+			//printf("%8.4f\t%8.4f\t%8.4f\n", t_from, t_to, h->t_inf) ;
+			bt = ih_btmxupdate2(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, -h->Nseq[i]) ;
+			while ((next_bt > t_to))
+			{
+				next_bt = ih_draw_nextbt(I, nlin, next_bt, t_to) ;
+				//if (next_bt==-1) i=0 ;
+				
+				if (next_bt > t_to)
+				{
+					x = sfs_ebtadd(x, old_bt - next_bt) ;
+					old_bt = next_bt ;
+
+					//printf("%i\t%8.4f\n", nlin, next_bt) ;
+					nlin-- ;
+					bt = ih_btmxupdate2(bt, nlin, h->no[i], h->no[i], next_bt + h->t_inf, 1) ;
 					
 				}
 			
@@ -447,10 +825,11 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 		
 		
 		
-		
+		node = x->sfs ; 
 		for (i=0 ; i<x->NNode ; i++)
 		{
-			node = sfsnode_get(i, x->sfs) ;
+			//node = sfsnode_get(i, x->sfs) ;
+			
 			for (k=0 ; k<x->N ; k++)
 			{
 				d1[k] = node->desc[k] ;
@@ -459,7 +838,7 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 			t1 = node->t ;
 			//printf("%8.4f\n", t1) ;
 			x->sfsp = sfsnode_orderedadd(t1 - h->t_inf, d1, x->N, x->sfsp) ;
-	
+			node = node->next ; 
 		}
 	
 
@@ -469,7 +848,9 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 		
 		//sfs_print(x->sfsp, x->N) ;
 		x = sfs_reinit(x) ;	
-		bt = ih_btmxreset(bt) ;
+		
+		bt->N = 0 ;
+		//bt = ih_btmxreset(bt) ;
 	}
 
 	
@@ -481,6 +862,8 @@ sfstype* ih_draw_coaltree(Itrajtype *I, hosttype* h, int Niter)
 	//sfs_calcll(x, sfsdatatype *d, int Niter)
 	ih_btfree(bt) ;
 	bt = NULL ;
+	x = sfs_ebtmean(x, Niter) ;
+	//sfs_ebtprint(x) ;
 	return x ;
 }
 
@@ -595,6 +978,34 @@ double* ih_calculateess(double *ebt,  int n)
 	return ess ;
 }
 
+
+double ih_calculateess1(double *ebt, int n)
+{
+	// calculate sumkET
+	int L = n-1, i ;
+	double sumkET = 0 ;
+	for (i=0 ; i<L ; i++)
+	{
+		sumkET += (i+2) * ebt[i] ; 
+	}
+	return sumkET ;	
+}
+
+double ih_calculateess2(double *ebt, int n, int i, double sumkET)
+{
+	// calculate expected site spectrum
+	int L = n -1, k;
+	
+	
+	double p = 0 ;
+	for (k=2 ; k<= (n - i + 1) ; k++)
+	{
+		p += k * (k-1) *choose(n-k, i-1) * ebt[k-2] ;
+	}
+	p = p * beta(n-i,i) / sumkET ;
+	return p;
+}
+
 double ih_nmutdist(double *ebt, int n)
 {
 	// approximate the distribution over the number of mutations as poisson with mean sumKET * mutation rate
@@ -635,7 +1046,7 @@ double ih_draw_nextbt(Itrajtype* I, int n, double t_from, double t_to)
 		p_cum += nchoose2 * I->inv_ne[i] * dt ;
 		p[i] = exp(-p_cum) ; // probability that coalescent event hasnt occurred   
 		r = (double) rand() / (RAND_MAX) ;
-		//printf("%8.4f %8.4f %8.4f\n", I->t[i], p[i], r) ;		 	
+		//printf("%8.4f %8.4f %8.4f %8.4f %8.4f %8.4f\n", I->t[i], p[i], r, dt, p_cum, (I->v[i]*I->v[i]) * I->inv_ne[i]) ;		 	
 		if (r > p[i]) // if event has occurred
 		{
 			p[i] = nchoose2 * I->inv_ne[i] ;
@@ -691,4 +1102,35 @@ double* sfs_calcll(sfstype* x, sfsdatatype *d, int Niter)
 	
 	return ll ;
 }
+
+double* sfs_calcll2(sfstype* x, sfsdatatype *d, int Niter)
+{
+	double ttot = x->ttot , lttot = log(ttot);
+	double p ;
+	double *ll ;
+	ll = calloc(2, sizeof(double)) ;
+	ll[0] = 0.0 ;
+	ll[1] = ttot / Niter ;
+	int i, j;
+	for (i=0 ; i<d->mut_n ; i++)
+	{
+		p = sfs_getbl(x, d->mut[i]) ;
+		/*for (j=0 ; j<d->lp ; j++)
+		{
+			printf("%i ", d->mut[i][j]) ;
+		}
+		printf("%8.4f\n", p) ;*/
+		ll[0]+= d->mutc[i]*(log(p) - lttot) ;
+	}
+	
+	// add multinomial term
+	ll[0]+= lgammafn(d->mut_n + 1) ;
+	for (i=0 ; i<d->mut_n ; i++)
+	{
+		ll[0]-=  lgammafn(d->mutc[i] + 1) ;
+	}
+	
+	return ll ;
+}
+
 

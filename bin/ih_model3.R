@@ -44,20 +44,20 @@ ih_model_sfsll <- function(params, D)
 	#print(c(bet, c, p, delt, V0, T0, t))
 	ss <- params$ss
 	alph <- params$alph
-	ih <-.Call("ih_R_getsfs", bet, p, c, delt, V0, T0, ss, t, D)
+	ih <-.Call("ih_R_getsfs2", bet, p, c, delt, V0, T0, ss, t, D)
 	#print(ih)
 	ll <- log(0)
 	if (ih$err != 0)
 	{
 		ll <- ih$ll
 		ll3 <- 0
-		#print(ih$ES)
 		r <- params$nsites * ih$ES * params$mr
+		#print(r)
 		ll2 <- dpois(D$S, r, log=TRUE)
 		cn = D$cn
 		for (i in seq(1, length(ih$cn)))
 		{
-		ll3 <- ll3 + dnorm(log10(alph * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
+		#ll3 <- ll3 + dnorm(log10(alph * cn[i]), log10(ih$cn[i]), 1, log = TRUE)
 		}
 		ll <- ll + ll2 + ll3
 	
@@ -72,6 +72,8 @@ ih_extractparams <- function(pars, params, which.params)
 {
 	pars2 <- exp(pars)
 	params[which.params] <- pars2
+	params$bet <- params$bet/params$sc
+	params$p <- params$p * params$sc
 	return(params)
 }
 
@@ -239,7 +241,9 @@ ih_model_plottraj <- function(mcmc.in, params, which.params, lim1, lim2)
 	for (i in seq(1, L, by=100))
 	#for (i in seq(1,))
 	{
+		oldparams <- params 
 		params <- ih_extractparams(mcmc.in[i,], params, which.params)
+		
 		#print(params)
 		sir <- ih_get_traj_R(params$bet, params$p, params$c, params$delt, params$V0, params$T0, params$ss)
 	#	print(sir)
@@ -250,8 +254,42 @@ ih_model_plottraj <- function(mcmc.in, params, which.params, lim1, lim2)
 		ap <- approx(T, log10(sir$v), ti, method="constant")
 		traj <- rbind(traj, ap$y)
 		print(i)
+		params <- oldparams
 	}
 	traj <- rbind(traj, ti)
 	return(traj)
 }
 
+ih_model_get_ebt_all <- function(mcmc.in, params, which.params, D)
+{
+	L <- nrow(mcmc.in)
+	Niter <- params$Niter
+	for (i in seq(1, L, by=10))
+	ebt_all <- NULL
+	
+	for (i in seq(1, L, by=100))
+	{
+		oldparams <- params 
+		params <- ih_extractparams(mcmc.in[i,], params, which.params)
+		#print(params)
+		ebt <- ih_model_get_ebt(params, D, Niter)
+		ebt_all <- rbind(ebt_all, ebt)
+		params <- oldparams
+		print(i)
+	}
+	return(ebt_all)
+}
+
+
+ih_model_get_ebt <- function(params, D, Niter)
+{
+	ebt <- .Call("ih_R_getebt", params$bet, params$p, params$c, params$delt, params$V0, params$T0, params$ss, params$t, D, Niter)
+	return(ebt) 
+}
+
+ih_model_get_phylo <- function(ebt, Ns, ts)
+{
+	if (length(Ns) == 1)
+		tr <- rcoal(Ns, br=ebt)
+	return(tr)
+}

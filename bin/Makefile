@@ -18,5 +18,25 @@ runall.%:
 	cat ../submit.all.jobs |\
 	 sed 's/rundir/$*/g' > ../run/$*/run.jobs
 
-plotall.%:
 
+testdir:
+	mkdir ../test
+
+testnew.%:	
+	mkdir ../test/$*
+	cat ../params/data.params > ../test/$*/data.params
+	cat ../params/opt.params  > ../test/$*/opt.params
+
+testdata.%:	
+	Rscript intrahostdata.R ../test/$*/data.params ../test/$*
+	seq-gen -mHKY -s7e-5 -l12000 < ../test/$*/tr.nwk > ../test/$*/seq.dat
+	#echo " 100 903" > ../test/$*/seq.dat
+	#cat ../test/$*/seq.dat.all | grep ^t >> ../test/$*/seq.dat
+	#cat ../test/$*/seq.dat.all | grep -v ^t > ../test/$*/nodes.dat
+	
+	
+testrun.%:	 
+	Rscript intrahosttest.R ../test/$*/opt.params ../test/$*/ ../test/$*/
+
+test.%:
+	echo $*
