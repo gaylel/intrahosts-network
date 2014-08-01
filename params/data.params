@@ -11,7 +11,8 @@ params <- list(
 	mr=7e-5,
 	alph=1000,
 	ss=0.01,
-	sc=1
+	sc=1,
+	Niter = 1000
 )
 
 ###### data ############

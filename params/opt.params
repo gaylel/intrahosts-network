@@ -11,7 +11,8 @@ params.init <- list(
 	mr=5.5e-6,
 	alph=1000,
 	ss=0.01,
-	sc=1
+	sc=1,
+	Niter = 1000
 )
 
 
