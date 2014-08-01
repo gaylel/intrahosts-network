@@ -8,7 +8,7 @@ params <- list(
 	delt=3.4,
 	V0 = 10,
 	T0 = 4e8,
-	mr=1e-5,
+	mr=7e-5,
 	alph=1000,
 	ss=0.01,
 	sc=1,
