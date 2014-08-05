@@ -79,7 +79,8 @@ switch(as.character(testno),
 			}
 			
 			pdf(llpdffile)
-			plot(t_i, q[2,], type="l", lwd = 2, xlab="t", ylab="p(t|D)", ylim=c(0,0.5))
+			q <- apply(ll_all, 2, quantile, c(0.25, 0.5, 0.75), na.rm=TRUE)
+			plot(t_i, q[2,], type="l", lwd = 2, xlab="t", ylab="p(t|D)", ylim=c(0,0.2))
 			#polygon(c(t_i, rev(t_i)), c(q[1,], rev(q[3,])), col="gray", border="gray")
 			#lines(t_i, q[2,], type="l", lwd = 2)
 			dev.off()

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd /users/gaylel/git/intrahosts-network/bin
+
+
+#$ -t 1-12
+
+outdir=$(ls -d ../test/lltest/*/ | sed ${SGE_TASK_ID}'q;d')
+
+export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/gcc-4.2.1/lib64/:/users/gaylel/bin
+/usr/local/apps/R/R-3.0.2/bin/Rscript lltests.R 1 ../test/lltest/ ${outdir}  
+ 
+
