@@ -51,9 +51,11 @@ ih_model_sfsll <- function(params, D)
 	{
 		ll <- ih$ll
 		ll3 <- 0
+		#ll <- 0
 		r <- params$nsites * ih$ES * params$mr
 		#print(r)
 		ll2 <- dpois(D$S, r, log=TRUE)
+		#ll2 <- 0
 		cn = D$cn
 		for (i in seq(1, length(ih$cn)))
 		{

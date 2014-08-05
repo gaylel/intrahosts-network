@@ -164,7 +164,7 @@ SEXP ih_R_getebt(SEXP R_bet, SEXP R_p, SEXP R_c, SEXP R_delt, SEXP R_V0, SEXP R_
 	I = ih_drawI_Baccam(bet, delt, c, p, T0, V0, ss) ;
 	sfsdatatype *sdt = ih_read_data(R_D) ;
 	int Nsamp = LENGTH(VECTOR_ELT(R_D, 4)) ;
-	printf("Nsamp = %i, ns = %i, ts=%8.4f\n", Nsamp, sdt->ns[0], sdt->ts[0]) ;
+	//printf("Nsamp = %i, ns = %i, ts=%8.4f\n", Nsamp, sdt->ns[0], sdt->ts[0]) ;
 	hosttype* h ;
 	h = ih_hostinit(h_ind, sdt->ns, sdt->ts, Nsamp, t_off) ;
 

@@ -23,6 +23,7 @@ D <- list(
 	S=0, 
 	ts=c(20), 
 	Ns=100, 
+	seqlen=903,
 	cn=0
 )
 

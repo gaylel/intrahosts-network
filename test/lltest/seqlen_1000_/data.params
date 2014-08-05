@@ -1,0 +1,29 @@
+#### initialisation of parameters #######
+
+params <- list(
+	t=5,
+	bet=3.4e-5,
+	p=7.9e-3,
+	c=3.3,
+	delt=3.4,
+	V0 = 10,
+	T0 = 4e8,
+	mr=7e-5,
+	alph=1000,
+	ss=0.01,
+	sc=1,
+	Niter = 5000
+)
+
+###### data ############
+
+D <- list(
+	mut=integer(0), 
+	count=0, 
+	S=0, 
+	ts=c(20), 
+	Ns=100, 
+	seqlen=1000,
+	cn=0
+)
+

@@ -29,7 +29,8 @@ testnew.%:
 
 testdata.%:	
 	Rscript intrahostdata.R ../test/$*/data.params ../test/$*
-	seq-gen -mHKY -s7e-5 -l12000 < ../test/$*/tr.nwk > ../test/$*/seq.dat
+	#seq-gen -mHKY -s7e-5 -l12000 < ../test/$*/tr.nwk > ../test/$*/seq.dat
+	./seqgendata.sh ../test/$*/tr.nwk ../test/$*/seq.dat ../test/$*/data.params 
 	#echo " 100 903" > ../test/$*/seq.dat
 	#cat ../test/$*/seq.dat.all | grep ^t >> ../test/$*/seq.dat
 	#cat ../test/$*/seq.dat.all | grep -v ^t > ../test/$*/nodes.dat
@@ -41,3 +42,12 @@ testrun.%:
 testall.%:
 	cat ../submit.test.jobs |\
 	sed 's/rundir/$*/g' > ../test/$*/run.jobs
+
+expnew.%:
+	mkdir ../test/$*
+	cat ../params/data.params > ../test/$*/data.params
+	cat ../params/opt.params  > ../test/$*/opt.params
+	cat ../params/exp.params > ../test/$*/exp.params
+	
+
+
