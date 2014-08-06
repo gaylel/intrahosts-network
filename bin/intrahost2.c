@@ -538,7 +538,7 @@ double* ih_psfs2(sfsdatatype* d, Itrajtype *I, hosttype *h, int Niter)
 	
 	double *ll ;
 	double ttot=0 ;
-	int i, j ;
+	int i, j, muttot=0 ;
 	
 	sfstype *x ;
 	x = ih_draw_allbt(Niter, h, I) ;
@@ -568,12 +568,14 @@ double* ih_psfs2(sfsdatatype* d, Itrajtype *I, hosttype *h, int Niter)
 	//printf("ttot = %8.4f\n", ttot) ;
 	
 	// add multinomial term
-	ll[0]+= lgammafn(d->mut_n + 1) ;
+	//ll[0]+= lgammafn(d->mut_n + 1) ;
 	for (i=0 ; i<d->mut_n ; i++)
 	{
+		muttot += d->mutc[i] ;  
+	
 		ll[0]-=  lgammafn(d->mutc[i] + 1) ;
 	}
-	
+	ll[0]+= lgammafn(muttot + 1) ;
 	sfs_free(x) ;
 	return ll ;
 }

@@ -58,7 +58,7 @@ write.table(ebt, file=btfile, quote=FALSE, col.names=FALSE)
 
 
 
-boxplot(ebt, outline=FALSE)
+boxplot(ebt, outline=FALSE, ylim=c(0, 1.5))
 tr2 <- read.tree(paste(outdir, "/tr.nwk", sep=""))
 
 tr2_c <- coalescent.intervals(tr2)
