@@ -77,8 +77,8 @@ switch(as.character(testno),
 				#par_init <- ih_model_getparams(params.isopt, params.init)
 				params <- c(params.init, list(nsites=nsites, Ns=ns))
 				D <- list(mut=jsfs$mut, count=jsfs$count, S=jsfs$S, ts=ts, Ns=ns, cn=cn)
-				print(D)
-				print(jsfs)
+				#print(D)
+				#print(jsfs)
 				ll <- NULL
 				for (t_ii in t_i)
 				{
