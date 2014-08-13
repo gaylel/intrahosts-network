@@ -1,0 +1,70 @@
+\documentclass[a4paper,18pt]{report}
+\usepackage[top=2.5cm, right=2.0cm, left=2.0cm, bottom=3.0cm]{geometry}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{amsmath}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+
+\title{Intrahost models}
+\author{Gayle Leen}
+
+
+\begin{document}
+\maketitle
+\section{Introduction}
+\section{Intrahost model}
+We use a mathematical model of influenza viral dynamics in a single affected host from \cite{baccam_2006}. We use the simplest model, in which influenzaA virus infection is limited by the availability of susceptible target (epithelial) cells rather than the effects of the immune response. This is described by the following
+differential equations:
+\begin{eqnarray}
+\frac{dT}{dt} &=& -\beta T V \\
+\frac{dI}{dt} &=& \beta TV - \delta I \\
+\frac{dV}{dt} &=& pI - cV 
+\end{eqnarray}
+$T$ is the number of uninfected target cells, $I$ is the number of productively infected cells, and $V$ is the infectious viraltiter expressed in $\textrm{TCID}_{50} / \textrm{ml}$ of nasal wash. Susceptible cells become infected byvirus at rate $\beta TV$, where $\beta$ is the rate constant characterizing infection.Virally infected cells, $I$, by shedding virus, increase viral titers at an average rate of $p$ per cell and die at a rate of $\delta$ per cell.Free virus is cleared at a rate of $c$ per day.
+The parameters are summarised in Table \ref{table:baccam}.
+\begin{table}[http]
+\caption{Parameters for model of  Intrahost viral dynamics \label{table:baccam}}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Parameter} & \textbf{Definition} & \textbf{Average value} from \cite{baccam_2006} \\
+\hline
+$\beta$ & Infection rate constant & $2.7 \times 10^{-5} [\textrm{TCID}_{50} / \textrm{ml}]^{-1} d^{-1} $ \\
+$V_0$ & Initial virus titer & $9.3 \times 10^{-2}$ \\
+$p$ & Average rate of increase of viral titer per infected cell & $1.2 \times 10^{-2} [\textrm{TCID}_{50} / \textrm{ml}] d^{-1}$ \\
+$\delta$ & $1/\delta$ is the infected cell lifespan & $4 d^{-1}$ \\ 
+$c$ & Viral clearance rate & $3d^{-1}$ \\
+$T_{0}$ & Initial number of uninfected target cells & fixed at $4 \times 10^{-8}$ \\
+\hline
+\end{tabular}
+\end{center}
+\label{default}
+\end{table}%
+\section{Coalescent under intrahost model}
+Suppose that we take a sample of $V$, of size $N$ at $\tau$ days after the start of infection. We can use coalescent theory to sample the ancestral tree underlying the $n$ virions (?).
+Following \cite{Volz2009}, in which the rate of coalescence was derived for a deterministic SIR compartmental model, the rate of coalescence in a population of $n$ under the Baccam model is given by:
+\begin{eqnarray}
+ \lambda_n(t)= \frac{{ n \choose 2}}{{V(t) \choose 2}}p\beta T(t) V(t) 
+ \end{eqnarray}
+ We want to estimate the branching times of the tree $b_2, ... , b_{n}$, where $b_j$ denote the time at which $j-1$ lineages branches into $j$. Starting with $n$ lineages at time $\tau$, we work backwards in time. Denoting the intervals between
+ coalescent events as $g_2, ..., g_n$, where $g_j$ represents the interval in which there are $j$ lineages, the distribution is given by:
+ \begin{eqnarray}
+ p(g_i \mid b_i) = \lambda_i(b_i + g_i) \exp \left(-\int_{x=b_i}^{b_i + g_i} \lambda_i(x) \right)
+ \end{eqnarray}
+ We simulate coalescent trees by drawing intervals given the trajectory $V(t)$, between $\tau$ and $0$. Note that we do not necessarily end with $1$ lineage at $t=0$. 
+\section{Site frequency spectrum, likelihood function}
+We denote the site frequency spectrum (SFS) by $\mathbf{m}=(m_1,É,m_{n?1})$ where $m_k$ denotes the number of variants/mutations that are carried by k individuals. Denote the demographic parameters (for the intrahost model) as $\Theta_D=\{\beta, V_), p, \delta, c, \tau\}$. Conditional on the number of segregating sites and assuming that the sites are unlinked (independence between sites,  reasonable assumption for next generation sequencing of viral populations) the vector $\mathbf{m}$ follows a multinomial distribution that provides the likelihood function of the vector of demographic parameters $\Theta_D$:
+\begin{eqnarray}
+p(m_1,...,m_{n-1} \mid \Theta_D) =  \textrm{Multinomial}(p_1,...,p_{n-1})
+\end{eqnarray}
+where $p_k$ is the probability that a variant is carried by $k$ individuals conditional on being segregating in the sample. Since we assume that mutations occurred according to a Poisson process, the $p_k$'s are given by the expected ratio between the branches leading to $k$ individuals and the total length of the coalescent tree, and this expected ratio can be evaluated with simulation \cite{adams_2004} \cite{griffiths1999}. Suppose that we simulate $N_T$ coalescent trees given $\Theta_D$. Then
+\begin{eqnarray}
+p_k = \frac{\sum_{i=1}^{N_T} g^k_i}{\sum_{j=1}^{n-1}\sum_{i=1}^{N_T} g^j_i}
+\end{eqnarray}
+where $g^k_i$ is the branch length from the $i$th coalescent tree that leads to $k$ individuals.
+\subsection{Joint site frequency spectrum}
+If there is more than one sample, then we use the joint site frequency spectrum e.g. \cite{chen2012} across the samples. i.e. for $2$ samples  we generate $\{m_{ij}\}$, ($m_ij$ variants that are carried by $i$ individuals in sample $1$, and $j$ individuals in sample $2$)
+\bibliography{intrahost.bib}
+\bibliographystyle{plain}
+\end{document}
